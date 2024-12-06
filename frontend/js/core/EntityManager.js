@@ -15,6 +15,19 @@ export class EntityManager {
     createStoonie(config) {
         const id = this.generateEntityId();
         const stoonie = new Stoonie(id, config);
+        
+        // Set up birth callback
+        stoonie.onBirth = (position) => {
+            this.createStoonie({
+                position: position.clone().add(new THREE.Vector3(
+                    Math.random() * 2 - 1,
+                    0,
+                    Math.random() * 2 - 1
+                )),
+                gender: Math.random() > 0.5 ? 'male' : 'female'
+            });
+        };
+        
         this.entities.set(id, stoonie);
         this.scene.add(stoonie.getMesh());
         return stoonie;
@@ -37,10 +50,14 @@ export class EntityManager {
     }
 
     update(deltaTime) {
+        // Update all entities
         this.entities.forEach(entity => {
             entity.update(deltaTime);
             
-            // Check for dead entities
+            // Check for interactions with other entities
+            entity.checkInteractions(Array.from(this.entities.values()));
+            
+            // Remove dead entities
             if (entity.isDead()) {
                 this.removeEntity(entity.id);
             }
