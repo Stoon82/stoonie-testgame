@@ -6,6 +6,7 @@ import { UIManager } from './UIManager.js';
 import { DebugManager } from './DebugManager.js';
 import { UIOverlay } from './UIOverlay.js';
 import { SoulManager } from './SoulManager.js';
+import NeedsManager from './NeedsManager.js';
 
 class GameEngine {
     constructor() {
@@ -13,6 +14,7 @@ class GameEngine {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.clock = new THREE.Clock();
+        this.raycaster = new THREE.Raycaster();
         
         // Managers
         this.worldManager = new WorldManager(this.scene);
@@ -21,6 +23,7 @@ class GameEngine {
         this.debugManager = new DebugManager(this);
         this.uiOverlay = null;
         this.soulManager = null;
+        this.needsManager = new NeedsManager();
         
         this.init();
     }
@@ -83,6 +86,8 @@ class GameEngine {
         this.uiManager.update(deltaTime);
         this.soulManager.update(deltaTime);
         this.debugManager.update();
+        this.uiOverlay.update();
+        this.needsManager.update(deltaTime);
     }
 
     render() {

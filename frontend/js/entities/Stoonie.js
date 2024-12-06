@@ -18,13 +18,25 @@ export default class Stoonie extends BaseEntity {
         this.soul = null;
         this.healingFactor = 1.0;
         this.shield = 0;
+        this.damageNumbers = []; // Array to store damage number objects
         
         this.createModel();
         this.createMesh();
+
+        // Initialize needs
+        if (this.gameEngine.needsManager) {
+            this.gameEngine.needsManager.initializeNeeds(this.id);
+        }
     }
 
     update(deltaTime) {
         super.update(deltaTime);
+
+        // Update needs
+        if (this.gameEngine.needsManager) {
+            const needs = this.gameEngine.needsManager.update(this.id, deltaTime);
+            this.updateVisualState(needs);
+        }
 
         // Apply healing if has healing power
         if (this.healingFactor > 1.0) {
@@ -37,7 +49,11 @@ export default class Stoonie extends BaseEntity {
             if (this.pregnancyTime >= this.pregnancyDuration) {
                 this.giveBirth();
             }
+            this.updatePregnancyVisual();
         }
+
+        // Update damage numbers
+        this.updateDamageNumbers(deltaTime);
 
         // Random movement
         this.wander(deltaTime);
@@ -60,10 +76,33 @@ export default class Stoonie extends BaseEntity {
 
         // Add pregnancy indicator if female
         if (this.gender === 'female') {
-            this.pregnancyIndicator = new THREE.Mesh(
+            this.pregnancyIndicator = new THREE.Group();
+            
+            // Main pregnancy sphere
+            const pregnancySphere = new THREE.Mesh(
                 new THREE.SphereGeometry(0.2, 16, 16),
-                new THREE.MeshPhongMaterial({ color: 0xffff00, visible: false })
+                new THREE.MeshPhongMaterial({ 
+                    color: 0xffff00, 
+                    visible: false,
+                    transparent: true,
+                    opacity: 0.7
+                })
             );
+            
+            // Progress ring
+            this.pregnancyProgress = new THREE.Mesh(
+                new THREE.TorusGeometry(0.3, 0.03, 16, 32),
+                new THREE.MeshPhongMaterial({
+                    color: 0x00ff00,
+                    visible: false,
+                    transparent: true,
+                    opacity: 0.8
+                })
+            );
+            this.pregnancyProgress.rotation.x = Math.PI / 2;
+            
+            this.pregnancyIndicator.add(pregnancySphere);
+            this.pregnancyIndicator.add(this.pregnancyProgress);
             this.pregnancyIndicator.position.y = 0.7;
             this.mesh.add(this.pregnancyIndicator);
         }
@@ -76,6 +115,110 @@ export default class Stoonie extends BaseEntity {
         this.soulIndicator.rotation.x = Math.PI / 2;
         this.soulIndicator.visible = false;
         this.mesh.add(this.soulIndicator);
+
+        // Add needs indicators
+        this.needsIndicator = new THREE.Group();
+        this.needsIndicator.position.y = -0.7;
+        this.mesh.add(this.needsIndicator);
+    }
+
+    updateVisualState(needs) {
+        if (!needs) return;
+
+        // Update mesh color based on health
+        const baseColor = this.gender === 'male' ? new THREE.Color(1, 0, 0) : new THREE.Color(0, 0, 1);
+        const healthFactor = needs.health / 100;
+        this.mesh.material.color.copy(baseColor).multiplyScalar(healthFactor);
+
+        // Update needs indicators
+        this.updateNeedsIndicators(needs);
+    }
+
+    updateNeedsIndicators(needs) {
+        // Clear previous indicators
+        while (this.needsIndicator.children.length) {
+            this.needsIndicator.remove(this.needsIndicator.children[0]);
+        }
+
+        // Add warning indicators for critical needs
+        if (needs.hunger < 20 || needs.thirst < 20 || needs.tiredness > 90) {
+            const warningSign = new THREE.Mesh(
+                new THREE.SphereGeometry(0.1, 8, 8),
+                new THREE.MeshPhongMaterial({ color: 0xff0000 })
+            );
+            warningSign.position.y = -0.2;
+            this.needsIndicator.add(warningSign);
+        }
+    }
+
+    updatePregnancyVisual() {
+        if (!this.pregnancyIndicator || !this.pregnancyProgress) return;
+
+        const progress = this.pregnancyTime / this.pregnancyDuration;
+        this.pregnancyIndicator.children[0].material.visible = true;
+        this.pregnancyProgress.material.visible = true;
+        
+        // Scale the progress ring based on pregnancy progress
+        this.pregnancyProgress.scale.set(progress, progress, 1);
+        
+        // Pulse effect
+        const pulseScale = 1 + Math.sin(Date.now() * 0.005) * 0.1;
+        this.pregnancyIndicator.scale.set(pulseScale, pulseScale, pulseScale);
+    }
+
+    showDamageNumber(amount) {
+        // Create sprite for damage number
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 64;
+        canvas.height = 64;
+        context.font = 'bold 32px Arial';
+        context.fillStyle = '#ff0000';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(Math.round(amount), 32, 32);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({ 
+            map: texture,
+            transparent: true
+        });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        
+        // Position above the Stoonie
+        sprite.position.copy(this.position);
+        sprite.position.y += 1;
+        
+        // Add to damage numbers array with lifetime
+        this.damageNumbers.push({
+            sprite: sprite,
+            lifetime: 1.0, // 1 second lifetime
+            velocity: new THREE.Vector3(0, 2, 0) // Upward movement
+        });
+        
+        // Add to scene
+        this.gameEngine.scene.add(sprite);
+    }
+
+    updateDamageNumbers(deltaTime) {
+        for (let i = this.damageNumbers.length - 1; i >= 0; i--) {
+            const damageNumber = this.damageNumbers[i];
+            damageNumber.lifetime -= deltaTime;
+            
+            // Update position
+            damageNumber.sprite.position.add(damageNumber.velocity.clone().multiplyScalar(deltaTime));
+            
+            // Update opacity
+            damageNumber.sprite.material.opacity = Math.max(0, damageNumber.lifetime);
+            
+            // Remove if lifetime is over
+            if (damageNumber.lifetime <= 0) {
+                this.gameEngine.scene.remove(damageNumber.sprite);
+                damageNumber.sprite.material.dispose();
+                damageNumber.sprite.geometry.dispose();
+                this.damageNumbers.splice(i, 1);
+            }
+        }
     }
 
     updateSoulIndicator() {
@@ -170,6 +313,11 @@ export default class Stoonie extends BaseEntity {
             const shieldDamage = Math.min(this.shield, amount);
             this.shield -= shieldDamage;
             amount -= shieldDamage;
+        }
+
+        // Show damage number
+        if (amount > 0) {
+            this.showDamageNumber(amount);
         }
 
         // Apply remaining damage to health

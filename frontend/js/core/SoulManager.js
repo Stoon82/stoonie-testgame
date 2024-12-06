@@ -23,14 +23,43 @@ export class SoulManager {
         return this.availableSouls.length > 0 ? this.availableSouls[0] : null;
     }
 
-    connectSoulToStoonie(stoonie) {
-        if (this.availableSouls.length === 0) {
-            console.log('No souls available');
+    getAvailableSouls() {
+        return this.availableSouls;
+    }
+
+    connectSoulToStoonie(soul, stoonie) {
+        if (!soul) {
+            console.log('Invalid soul: soul is null or undefined');
+            return false;
+        }
+        if (!stoonie) {
+            console.log('Invalid stoonie: stoonie is null or undefined');
+            return false;
+        }
+        if (!this.souls.has(soul.id)) {
+            console.log('Soul not found in souls collection');
             return false;
         }
 
-        const soul = this.availableSouls.shift();
-        soul.connectToStoonie(stoonie);
+        // Check if soul is available
+        const index = this.availableSouls.indexOf(soul);
+        if (index === -1) {
+            console.log('Soul is not available (already connected or invalid)');
+            return false;
+        }
+
+        // Check if stoonie already has a soul
+        if (stoonie.soul) {
+            console.log('Stoonie already has a soul connected');
+            return false;
+        }
+
+        // Connect soul to stoonie
+        this.availableSouls.splice(index, 1);
+        soul.connectedStoonie = stoonie;
+        stoonie.soul = soul;
+        
+        console.log(`Successfully connected soul ${soul.id} to stoonie`);
         return true;
     }
 
