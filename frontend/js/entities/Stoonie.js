@@ -7,6 +7,7 @@ export default class Stoonie extends BaseEntity {
         
         this.gender = config.gender || (Math.random() > 0.5 ? 'male' : 'female');
         this.createModel();
+        this.createMesh(); // Call createMesh after model creation
     }
 
     createModel() {
@@ -20,6 +21,10 @@ export default class Stoonie extends BaseEntity {
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.castShadow = true;
         this.mesh.position.copy(this.position);
+    }
+
+    createMesh() {
+        // Add mesh creation logic here
     }
 
     // Stoonie-specific behaviors

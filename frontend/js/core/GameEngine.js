@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { WorldManager } from './WorldManager.js';
 import { EntityManager } from './EntityManager.js';
+import { UIManager } from './UIManager.js';
 
 class GameEngine {
     constructor() {
@@ -13,6 +14,7 @@ class GameEngine {
         // Managers
         this.worldManager = new WorldManager(this.scene);
         this.entityManager = new EntityManager(this.scene);
+        this.uiManager = null; // Will be initialized after camera setup
         
         this.init();
     }
@@ -29,6 +31,9 @@ class GameEngine {
 
         // Setup controls
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        
+        // Initialize UI manager (after camera is set up)
+        this.uiManager = new UIManager(this.scene, this.camera);
         
         // Setup lighting
         this.setupLighting();
@@ -63,6 +68,7 @@ class GameEngine {
         const deltaTime = this.clock.getDelta();
         this.worldManager.update(deltaTime);
         this.entityManager.update(deltaTime);
+        this.uiManager.update(deltaTime);
     }
 
     render() {

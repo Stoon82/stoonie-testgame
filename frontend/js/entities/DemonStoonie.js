@@ -7,6 +7,7 @@ export default class DemonStoonie extends BaseEntity {
         
         this.damage = 20;  // Damage dealt to normal Stoonies
         this.createModel();
+        this.createMesh(); // Call createMesh after model creation
     }
 
     createModel() {
@@ -41,6 +42,10 @@ export default class DemonStoonie extends BaseEntity {
         rightHorn.rotation.z = Math.PI / 6;
         
         this.mesh.add(leftHorn, rightHorn);
+    }
+
+    createMesh() {
+        // Add implementation for createMesh method
     }
 
     attack(stoonie) {

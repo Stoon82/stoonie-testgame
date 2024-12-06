@@ -34,6 +34,19 @@ export default class BaseEntity {
         this.age += deltaTime;
     }
 
+    createMesh() {
+        if (this.mesh) {
+            // Store reference to the entity in the mesh for raycasting
+            this.mesh.entity = this;
+            // Also store in all child meshes
+            this.mesh.traverse(child => {
+                if (child instanceof THREE.Mesh) {
+                    child.entity = this;
+                }
+            });
+        }
+    }
+
     applyForce(force) {
         this.acceleration.add(force);
     }
