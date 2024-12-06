@@ -18,13 +18,17 @@ export default class BaseEntity {
 
     update(deltaTime) {
         // Update physics
-        this.velocity.add(this.acceleration.multiplyScalar(deltaTime));
-        this.position.add(this.velocity.multiplyScalar(deltaTime));
+        this.velocity.add(this.acceleration);
+        this.velocity.clampLength(0, 5); // Limit max speed
+        this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
         
         if (this.mesh) {
             this.mesh.position.copy(this.position);
             this.mesh.rotation.copy(this.rotation);
         }
+        
+        // Apply friction
+        this.velocity.multiplyScalar(0.95);
         
         // Reset acceleration
         this.acceleration.set(0, 0, 0);

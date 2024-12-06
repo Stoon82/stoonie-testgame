@@ -58,24 +58,27 @@ export default class Stoonie extends BaseEntity {
     }
 
     wander(deltaTime) {
-        // Update wander angle
-        this.wanderAngle += (Math.random() - 0.5) * 2 * deltaTime;
+        // Update wander angle with smoother randomness
+        this.wanderAngle += (Math.random() - 0.5) * Math.PI * deltaTime;
 
         // Calculate movement direction
         const direction = new THREE.Vector3(
             Math.cos(this.wanderAngle),
             0,
             Math.sin(this.wanderAngle)
-        );
+        ).normalize();
 
         // Apply force in that direction
-        const force = direction.multiplyScalar(this.maxSpeed * deltaTime);
-        this.applyForce(force);
+        const wanderForce = direction.multiplyScalar(this.maxSpeed);
+        this.applyForce(wanderForce);
 
         // Keep within bounds
         const bounds = 40;
         if (Math.abs(this.position.x) > bounds || Math.abs(this.position.z) > bounds) {
-            this.wanderAngle += Math.PI; // Turn around
+            // Calculate direction to center
+            const toCenter = new THREE.Vector3().sub(this.position).normalize();
+            const boundsForce = toCenter.multiplyScalar(this.maxSpeed * 2);
+            this.applyForce(boundsForce);
         }
     }
 

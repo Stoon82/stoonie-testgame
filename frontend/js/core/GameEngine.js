@@ -4,6 +4,7 @@ import { WorldManager } from './WorldManager.js';
 import { EntityManager } from './EntityManager.js';
 import { UIManager } from './UIManager.js';
 import { DebugManager } from './DebugManager.js';
+import { UIOverlay } from './UIOverlay.js';
 
 class GameEngine {
     constructor() {
@@ -17,6 +18,7 @@ class GameEngine {
         this.entityManager = new EntityManager(this.scene);
         this.uiManager = null; // Will be initialized after camera setup
         this.debugManager = new DebugManager(this);
+        this.uiOverlay = null;
         
         this.init();
     }
@@ -36,6 +38,9 @@ class GameEngine {
         
         // Initialize UI manager (after camera is set up)
         this.uiManager = new UIManager(this.scene, this.camera);
+        
+        // Initialize UI overlay
+        this.uiOverlay = new UIOverlay(this);
         
         // Setup lighting
         this.setupLighting();
