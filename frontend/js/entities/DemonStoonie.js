@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import BaseEntity from './BaseEntity.js';
 
 export default class DemonStoonie extends BaseEntity {
-    constructor(id, config = {}) {
-        super(id, config);
+    constructor(id, config = {}, gameEngine) {
+        super(id, config, gameEngine);
+        this.gameEngine = gameEngine;
         
         this.damage = 20;  // Damage dealt to normal Stoonies
         this.maxSpeed = 3; // Faster than normal Stoonies

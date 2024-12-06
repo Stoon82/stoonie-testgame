@@ -7,7 +7,7 @@
   - Main game loop management
   - Scene setup and rendering
   - Camera and controls handling
-  - Integration of all other managers
+  - Integration of all managers
 
 - **EntityManager.js**
   - Manages all game entities (Stoonies, DemonStoonies)
@@ -27,11 +27,22 @@
   - Stats panel display and positioning
   - Real-time UI updates
 
+- **UIOverlay.js**
+  - Spawn buttons for entities
+  - UI element styling and positioning
+  - Event handling for UI interactions
+
 - **DebugManager.js**
   - Debug overlay with entity statistics
   - FPS counter and performance monitoring
-  - Visual debug indicators for entities
+  - Visual debug indicators
   - Shift key activation system
+
+- **SoulManager.js**
+  - Soul pool management
+  - Soul-Stoonie connections
+  - Experience and leveling system
+  - Power unlocking and application
 
 ### Entities (`frontend/js/entities/`)
 - **BaseEntity.js**
@@ -39,35 +50,28 @@
   - Common properties (position, velocity, health)
   - Physics and movement calculations
   - Core entity behaviors
-  - Mesh-entity reference system for UI interaction
+  - Mesh-entity reference system
 
 - **Stoonie.js**
-  - Player-controlled entities
   - Gender-specific properties (red=male, blue=female)
   - Mating and reproduction mechanics
   - Energy and health management
-  - Hover stats display support
+  - Soul connection support
+  - Power effects implementation
 
 - **DemonStoonie.js**
   - Enemy entities (purple with horns)
-  - Attack behaviors
+  - Attack behaviors and damage dealing
   - Pathfinding and targeting
-  - Special abilities
   - Custom stats display
 
-### Environment (`frontend/js/environment/`)
-- **Tree.js**
-  - Resource objects
-  - Visual representation
-  - Interaction mechanics
+- **StoonieSoul.js**
+  - Level and experience system
+  - Power unlocking at specific levels
+  - Connection management with Stoonies
+  - Power application and removal
 
-- **Building.js**
-  - Shelter/obstacle objects
-  - Customizable dimensions
-  - Window generation
-  - Collision boundaries
-
-## Rules
+## Game Rules
 
 ### Stoonie Rules
 1. **Gender & Appearance**
@@ -79,6 +83,7 @@
    - Energy decreases over time
    - Health affected by demon attacks
    - Death occurs when health or energy reaches 0
+   - Death returns soul to pool if connected
 
 3. **Reproduction**
    - Requires one male and one female
@@ -86,98 +91,98 @@
    - Mating costs 30 energy points
    - New Stoonie inherits traits from parents
 
+### Soul System Rules
+1. **Soul Management**
+   - Start with 3 souls in pool
+   - Souls automatically connect to new Stoonies
+   - Souls return to pool when Stoonie dies
+   - Each soul levels independently
+
+2. **Experience Gain**
+   - Gain XP while pregnant
+   - Gain XP for successful mating
+   - Experience curves increase with level
+   - Powers unlock at specific levels
+
+3. **Soul Powers**
+   - Level 2: Speed Boost (50% faster)
+   - Level 3: Healing Aura (20% health regen)
+   - Level 5: Shield Bubble (50 shield points)
+   - Level 7: Energy Blast (unlocked)
+   - Level 10: Time Warp (unlocked)
+
 ### Game World Rules
 1. **Environment**
-   - Trees provide resources
-   - Buildings offer shelter
-   - Ground has friction effect on movement
+   - Bounded play area (80x80 units)
+   - Entities stay within bounds
+   - Smooth physics movement
+   - Collision detection between entities
 
 2. **Combat**
-   - DemonStoonies actively hunt regular Stoonies
-   - Damage is instant and unavoidable when in range
+   - DemonStoonies actively hunt Stoonies
+   - Damage is reduced by shields
    - No friendly fire between Stoonies
-
-3. **Performance**
-   - Limit entity count based on performance
-   - Optimize updates for inactive entities
-   - Use spatial partitioning for collision detection
+   - Visual feedback for damage
 
 ### UI Rules
 1. **Entity Interaction**
    - Hover over entities to view stats
-   - Stats panel follows cursor with offset
-   - Different stats shown for different entity types
+   - Stats panel follows cursor
+   - Different stats for different entities
+   - Soul status shown if connected
 
-2. **Display Format**
-   - Stoonie Stats:
-     * Gender
-     * Health percentage
-     * Energy level
-     * Age in seconds
-   - Demon Stats:
-     * Health percentage
-     * Energy level
-     * Attack damage
-
-3. **Visual Style**
-   - Semi-transparent dark background
-   - White text for readability
-   - Monospace font for stats
-   - Smooth follow cursor
-
-### Debug Mode Rules
-1. **Activation**
-   - Hold Shift key to enter debug mode
-   - Release Shift to return to normal view
-
-2. **Visual Indicators**
-   - Yellow arrows show entity direction
-   - Green arrows show velocity vectors
-   - Red circles show interaction radius
-   - All indicators appear/disappear with debug mode
-
-3. **Debug Overlay**
+2. **Debug Mode (Shift Key)**
    - FPS counter
    - Entity population statistics
-   - Gender distribution
-   - Pregnancy count
-   - Control information
-   - Visual indicator legend
+   - Direction indicators
+   - Velocity vectors
+   - Interaction radius
+
+3. **Spawn Controls**
+   - Green button spawns Stoonie
+   - Red button spawns Demon
+   - Random spawn position
+   - Automatic soul connection
 
 ## Development Guidelines
 1. **Code Structure**
    - Keep modules decoupled
    - Use event system for communication
    - Document all public methods
-   - Follow consistent naming conventions
+   - Follow consistent naming
 
-2. **Version Control**
-   - Create feature branches
-   - Write descriptive commit messages
-   - Test before merging to master
-   - Keep commits focused and atomic
+2. **Performance**
+   - Optimize entity updates
+   - Use object pooling
+   - Limit visual effects
+   - Monitor FPS impact
 
 3. **Testing**
    - Test new features in isolation
-   - Verify performance impact
-   - Check cross-module interactions
-   - Validate edge cases
+   - Verify soul system integration
+   - Check power effects
+   - Validate experience gain
 
 ## Changelog
 
+### Version 0.1.3 (2024-12-06)
+- Added complete soul system with experience and leveling
+- Implemented soul powers and effects
+- Added spawn buttons to UI
+- Fixed entity movement physics
+- Improved debug visualization
+
 ### Version 0.1.2 (2024-12-06)
 - Added DebugManager with real-time statistics
-- Implemented visual debug indicators for entities
-- Added FPS counter and performance monitoring
+- Implemented visual debug indicators
+- Added FPS counter
 - Created shift-key activated debug mode
-- Integrated debug system with GameEngine
 
 ### Version 0.1.1 (2024-12-06)
-- Added UI Manager with entity hover functionality
+- Added UI Manager with hover functionality
 - Implemented stats display system
 - Added entity-mesh reference system
 - Updated base entity with UI support
-- Fixed THREE.js import issues
 
 ### Version 0.1.0 (2024-12-06)
 - Initial project setup
@@ -185,30 +190,15 @@
 - Entity system implementation
 - Simple environment objects
 - Male/Female Stoonie differentiation
-- Basic DemonStoonie implementation
 
-### Planned Features
-- [ ] Advanced pathfinding for entities
-- [ ] Resource gathering mechanics
-- [ ] Stoonie evolution system
+## Future Work
+- [ ] Additional soul powers
+- [ ] Power visualization effects
+- [ ] Soul upgrade system
+- [ ] Resource gathering
+- [ ] Building construction
 - [ ] Weather effects
 - [ ] Day/night cycle
 - [ ] Advanced AI behaviors
 - [ ] Multiplayer support
 - [ ] Save/Load system
-- [ ] Interactive UI elements
-- [ ] Entity selection system
-- [ ] Command interface for Stoonies
-
-## Performance Targets
-- 60 FPS with 100+ entities
-- < 16ms per frame
-- < 100MB memory usage
-- Smooth scaling on mobile devices
-
-## Debug Tools (Planned)
-- Entity inspector
-- Performance monitor
-- World state viewer
-- AI behavior debugger
-- UI element inspector

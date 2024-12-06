@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export class UIOverlay {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;

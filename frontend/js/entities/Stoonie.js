@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import BaseEntity from './BaseEntity.js';
 
 export default class Stoonie extends BaseEntity {
-    constructor(id, config = {}) {
-        super(id, config);
+    constructor(id, config = {}, gameEngine) {
+        super(id, config, gameEngine);
+        this.gameEngine = gameEngine;
         
         this.gender = config.gender || (Math.random() > 0.5 ? 'male' : 'female');
         this.isPregnant = false;
@@ -14,9 +15,35 @@ export default class Stoonie extends BaseEntity {
         this.maxSpeed = 2;
         this.lastMateTime = 0;
         this.matingCooldown = 5; // seconds
+        this.soul = null;
+        this.healingFactor = 1.0;
+        this.shield = 0;
         
         this.createModel();
         this.createMesh();
+    }
+
+    update(deltaTime) {
+        super.update(deltaTime);
+
+        // Apply healing if has healing power
+        if (this.healingFactor > 1.0) {
+            this.health = Math.min(100, this.health + (deltaTime * (this.healingFactor - 1) * 10));
+        }
+
+        // Update pregnancy
+        if (this.isPregnant) {
+            this.pregnancyTime += deltaTime;
+            if (this.pregnancyTime >= this.pregnancyDuration) {
+                this.giveBirth();
+            }
+        }
+
+        // Random movement
+        this.wander(deltaTime);
+
+        // Update soul indicator
+        this.updateSoulIndicator();
     }
 
     createModel() {
@@ -40,21 +67,26 @@ export default class Stoonie extends BaseEntity {
             this.pregnancyIndicator.position.y = 0.7;
             this.mesh.add(this.pregnancyIndicator);
         }
+
+        // Add soul indicator
+        this.soulIndicator = new THREE.Mesh(
+            new THREE.TorusGeometry(0.7, 0.05, 16, 32),
+            new THREE.MeshPhongMaterial({ color: 0xffffff, opacity: 0.5, transparent: true })
+        );
+        this.soulIndicator.rotation.x = Math.PI / 2;
+        this.soulIndicator.visible = false;
+        this.mesh.add(this.soulIndicator);
     }
 
-    update(deltaTime) {
-        super.update(deltaTime);
-
-        // Update pregnancy
-        if (this.isPregnant) {
-            this.pregnancyTime += deltaTime;
-            if (this.pregnancyTime >= this.pregnancyDuration) {
-                this.giveBirth();
+    updateSoulIndicator() {
+        if (this.soulIndicator) {
+            this.soulIndicator.visible = this.soul !== null;
+            if (this.soul) {
+                // Change color based on soul level
+                const hue = (this.soul.level - 1) / 10; // 0 to 1 based on level (max level 10)
+                this.soulIndicator.material.color.setHSL(hue, 1, 0.5);
             }
         }
-
-        // Random movement
-        this.wander(deltaTime);
     }
 
     wander(deltaTime) {
@@ -133,14 +165,28 @@ export default class Stoonie extends BaseEntity {
     }
 
     takeDamage(amount) {
-        this.health -= amount;
-        // Flash red when damaged
-        if (this.mesh.material) {
-            const originalColor = this.mesh.material.color.clone();
-            this.mesh.material.color.setHex(0xff0000);
-            setTimeout(() => {
-                this.mesh.material.color.copy(originalColor);
-            }, 100);
+        // Apply shield if available
+        if (this.shield > 0) {
+            const shieldDamage = Math.min(this.shield, amount);
+            this.shield -= shieldDamage;
+            amount -= shieldDamage;
+        }
+
+        // Apply remaining damage to health
+        if (amount > 0) {
+            this.health = Math.max(0, this.health - amount);
+            // Flash red when taking damage
+            if (this.mesh) {
+                this.mesh.material.emissive.setHex(0xff0000);
+                setTimeout(() => {
+                    this.mesh.material.emissive.setHex(0x000000);
+                }, 100);
+            }
+        }
+
+        if (this.isDead() && this.soul) {
+            // Return soul to pool when dying
+            this.gameEngine.soulManager.disconnectSoulFromStoonie(this);
         }
     }
 }

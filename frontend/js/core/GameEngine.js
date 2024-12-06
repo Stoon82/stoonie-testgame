@@ -5,20 +5,22 @@ import { EntityManager } from './EntityManager.js';
 import { UIManager } from './UIManager.js';
 import { DebugManager } from './DebugManager.js';
 import { UIOverlay } from './UIOverlay.js';
+import { SoulManager } from './SoulManager.js';
 
 class GameEngine {
     constructor() {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.renderer = new THREE.WebGLRenderer();
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.clock = new THREE.Clock();
         
         // Managers
         this.worldManager = new WorldManager(this.scene);
-        this.entityManager = new EntityManager(this.scene);
+        this.entityManager = new EntityManager(this.scene, this);
         this.uiManager = null; // Will be initialized after camera setup
         this.debugManager = new DebugManager(this);
         this.uiOverlay = null;
+        this.soulManager = null;
         
         this.init();
     }
@@ -41,6 +43,9 @@ class GameEngine {
         
         // Initialize UI overlay
         this.uiOverlay = new UIOverlay(this);
+        
+        // Initialize Soul manager
+        this.soulManager = new SoulManager(this);
         
         // Setup lighting
         this.setupLighting();
@@ -76,6 +81,7 @@ class GameEngine {
         this.worldManager.update(deltaTime);
         this.entityManager.update(deltaTime);
         this.uiManager.update(deltaTime);
+        this.soulManager.update(deltaTime);
         this.debugManager.update();
     }
 

@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 
 export default class BaseEntity {
-    constructor(id, config = {}) {
+    constructor(id, config = {}, gameEngine) {
         this.id = id;
+        this.gameEngine = gameEngine;
         this.position = config.position || new THREE.Vector3(0, 0, 0);
         this.velocity = new THREE.Vector3();
         this.acceleration = new THREE.Vector3();
