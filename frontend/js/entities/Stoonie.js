@@ -24,7 +24,7 @@ export default class Stoonie extends BaseEntity {
     }
 
     createMesh() {
-        // Add mesh creation logic here
+        super.createMesh(); // Call parent's createMesh method
     }
 
     // Stoonie-specific behaviors

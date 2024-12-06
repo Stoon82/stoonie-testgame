@@ -45,7 +45,7 @@ export default class DemonStoonie extends BaseEntity {
     }
 
     createMesh() {
-        // Add implementation for createMesh method
+        super.createMesh(); // Call parent's createMesh method
     }
 
     attack(stoonie) {

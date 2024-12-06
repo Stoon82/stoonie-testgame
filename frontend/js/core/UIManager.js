@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export class UIManager {
     constructor(scene, camera) {
         this.scene = scene;
