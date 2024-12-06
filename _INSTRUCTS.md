@@ -27,6 +27,12 @@
   - Stats panel display and positioning
   - Real-time UI updates
 
+- **DebugManager.js**
+  - Debug overlay with entity statistics
+  - FPS counter and performance monitoring
+  - Visual debug indicators for entities
+  - Shift key activation system
+
 ### Entities (`frontend/js/entities/`)
 - **BaseEntity.js**
   - Base class for all game entities
@@ -119,6 +125,25 @@
    - Monospace font for stats
    - Smooth follow cursor
 
+### Debug Mode Rules
+1. **Activation**
+   - Hold Shift key to enter debug mode
+   - Release Shift to return to normal view
+
+2. **Visual Indicators**
+   - Yellow arrows show entity direction
+   - Green arrows show velocity vectors
+   - Red circles show interaction radius
+   - All indicators appear/disappear with debug mode
+
+3. **Debug Overlay**
+   - FPS counter
+   - Entity population statistics
+   - Gender distribution
+   - Pregnancy count
+   - Control information
+   - Visual indicator legend
+
 ## Development Guidelines
 1. **Code Structure**
    - Keep modules decoupled
@@ -139,6 +164,13 @@
    - Validate edge cases
 
 ## Changelog
+
+### Version 0.1.2 (2024-12-06)
+- Added DebugManager with real-time statistics
+- Implemented visual debug indicators for entities
+- Added FPS counter and performance monitoring
+- Created shift-key activated debug mode
+- Integrated debug system with GameEngine
 
 ### Version 0.1.1 (2024-12-06)
 - Added UI Manager with entity hover functionality
