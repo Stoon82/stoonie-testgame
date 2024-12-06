@@ -21,24 +21,33 @@
   - Terrain and obstacle placement
   - Resource management
 
+- **UIManager.js**
+  - Mouse interaction handling
+  - Entity hover detection via raycasting
+  - Stats panel display and positioning
+  - Real-time UI updates
+
 ### Entities (`frontend/js/entities/`)
 - **BaseEntity.js**
   - Base class for all game entities
   - Common properties (position, velocity, health)
   - Physics and movement calculations
   - Core entity behaviors
+  - Mesh-entity reference system for UI interaction
 
 - **Stoonie.js**
   - Player-controlled entities
   - Gender-specific properties (red=male, blue=female)
   - Mating and reproduction mechanics
   - Energy and health management
+  - Hover stats display support
 
 - **DemonStoonie.js**
   - Enemy entities (purple with horns)
   - Attack behaviors
   - Pathfinding and targeting
   - Special abilities
+  - Custom stats display
 
 ### Environment (`frontend/js/environment/`)
 - **Tree.js**
@@ -87,6 +96,29 @@
    - Optimize updates for inactive entities
    - Use spatial partitioning for collision detection
 
+### UI Rules
+1. **Entity Interaction**
+   - Hover over entities to view stats
+   - Stats panel follows cursor with offset
+   - Different stats shown for different entity types
+
+2. **Display Format**
+   - Stoonie Stats:
+     * Gender
+     * Health percentage
+     * Energy level
+     * Age in seconds
+   - Demon Stats:
+     * Health percentage
+     * Energy level
+     * Attack damage
+
+3. **Visual Style**
+   - Semi-transparent dark background
+   - White text for readability
+   - Monospace font for stats
+   - Smooth follow cursor
+
 ## Development Guidelines
 1. **Code Structure**
    - Keep modules decoupled
@@ -108,6 +140,13 @@
 
 ## Changelog
 
+### Version 0.1.1 (2024-12-06)
+- Added UI Manager with entity hover functionality
+- Implemented stats display system
+- Added entity-mesh reference system
+- Updated base entity with UI support
+- Fixed THREE.js import issues
+
 ### Version 0.1.0 (2024-12-06)
 - Initial project setup
 - Basic game engine structure
@@ -125,6 +164,9 @@
 - [ ] Advanced AI behaviors
 - [ ] Multiplayer support
 - [ ] Save/Load system
+- [ ] Interactive UI elements
+- [ ] Entity selection system
+- [ ] Command interface for Stoonies
 
 ## Performance Targets
 - 60 FPS with 100+ entities
@@ -137,3 +179,4 @@
 - Performance monitor
 - World state viewer
 - AI behavior debugger
+- UI element inspector
