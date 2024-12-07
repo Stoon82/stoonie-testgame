@@ -29,6 +29,7 @@ A unique game where you manage souls and their Stoonie vessels in a dynamic ecos
   - Unique IDs for all objects
   - Position and model management
   - Visual selection indicators
+  - **New**: Selection is maintained when clicking empty space if Ctrl key is held
 
 - **Combat System**
   - Demon Stoonies actively hunt regular Stoonies

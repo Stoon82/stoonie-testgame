@@ -131,35 +131,45 @@ export default class SelectionManager {
         const mesh = object.getMesh();
         let radius = 1; // Default radius
         let radiusMultiplier = 1.2; // Default size multiplier
+        let height = 0.1; // Default height above ground
 
-        if (mesh.geometry) {
-            if (!mesh.geometry.boundingSphere) {
-                mesh.geometry.computeBoundingSphere();
-            }
+        // Calculate the bounding sphere for the entire group
+        if (mesh instanceof THREE.Group) {
+            const box = new THREE.Box3().setFromObject(mesh);
+            const size = box.getSize(new THREE.Vector3());
+            radius = Math.max(size.x, size.z) / 2;
+        } else if (mesh.geometry) {
+            mesh.geometry.computeBoundingSphere();
             radius = mesh.geometry.boundingSphere?.radius || radius;
-
-            // Adjust size based on entity type
-            if (object.constructor.name === 'Building') {
-                radiusMultiplier = 1.5; // 50% larger for buildings
-            }
         }
 
-        const geometry = new THREE.RingGeometry(
-            radius * radiusMultiplier,      // inner radius
-            radius * (radiusMultiplier + 0.1), // outer radius
-            32  // segments
+        // Adjust size based on object type
+        if (object.constructor.name === 'Building') {
+            radiusMultiplier = 1.75; // 75% larger for buildings (was 3.5)
+            height = 0.2; // Slightly higher for better visibility
+        } else if (object.constructor.name === 'Tree') {
+            radiusMultiplier = 1.5; // 50% larger for trees
+        }
+
+        console.log(`Creating selection ring for ${object.constructor.name} with radius ${radius} and multiplier ${radiusMultiplier}`);
+
+        // Create the selection ring
+        const geometry = new THREE.TorusGeometry(
+            radius * radiusMultiplier,
+            0.1,
+            8,
+            32
         );
-        
+
         const material = new THREE.MeshBasicMaterial({
             color: 0x00ff00,
-            side: THREE.DoubleSide,
             transparent: true,
-            opacity: 0.5
+            opacity: 0.6
         });
-        
+
         const ring = new THREE.Mesh(geometry, material);
-        ring.rotation.x = -Math.PI / 2; // Lay flat
-        ring.position.set(0, 0.1, 0); // Slightly above the mesh
+        ring.rotation.x = Math.PI / 2; // Lay flat
+        ring.position.set(0, height, 0); // Slightly above the ground
         
         mesh.add(ring);
         this.selectionRings.set(object.id, ring);

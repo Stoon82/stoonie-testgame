@@ -50,50 +50,88 @@ export default class UIManager {
         `;
         document.body.appendChild(this.leftPanel);
 
-        // Create right UI overlay container
+        // Create bottom UI overlay container
         this.overlay = document.createElement('div');
         this.overlay.id = 'ui-overlay';
-        this.overlay.style.position = 'absolute';
-        this.overlay.style.top = '0';
-        this.overlay.style.right = '0';
-        this.overlay.style.width = '300px';
-        this.overlay.style.height = '100%';
+        this.overlay.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            height: fit-content;
+        `;
         document.body.appendChild(this.overlay);
 
-        // Create tab container
-        const tabContainer = document.createElement('div');
-        tabContainer.id = 'tab-container';
-        this.overlay.appendChild(tabContainer);
+        const buttonStyle = `
+            padding: 8px 16px;
+            font-size: 14px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            height: fit-content;
+        `;
 
-        // Create tabs
-        const tabs = [
-            { id: 'selection', label: 'Selection' },
-            { id: 'souls', label: 'Souls' },
-            { id: 'stoonies', label: 'Stoonies' },
-            { id: 'buildings', label: 'Buildings' }
+        // Add Stoonie button
+        const addStoonieBtn = document.createElement('button');
+        addStoonieBtn.textContent = '+ Add Stoonie';
+        addStoonieBtn.style.cssText = buttonStyle + 'background: #4CAF50;';
+        addStoonieBtn.addEventListener('mouseover', () => addStoonieBtn.style.background = '#45a049');
+        addStoonieBtn.addEventListener('mouseout', () => addStoonieBtn.style.background = '#4CAF50');
+        addStoonieBtn.addEventListener('click', () => {
+            const randomPosition = new THREE.Vector3(
+                (Math.random() - 0.5) * 40,
+                0,
+                (Math.random() - 0.5) * 40
+            );
+            this.gameEngine.entityManager.createStoonie({ position: randomPosition });
+        });
+        this.overlay.appendChild(addStoonieBtn);
+
+        // Add Demon button
+        const addDemonBtn = document.createElement('button');
+        addDemonBtn.textContent = '+ Add Demon';
+        addDemonBtn.style.cssText = buttonStyle + 'background: #f44336;';
+        addDemonBtn.addEventListener('mouseover', () => addDemonBtn.style.background = '#da190b');
+        addDemonBtn.addEventListener('mouseout', () => addDemonBtn.style.background = '#f44336');
+        addDemonBtn.addEventListener('click', () => {
+            const randomPosition = new THREE.Vector3(
+                (Math.random() - 0.5) * 40,
+                0,
+                (Math.random() - 0.5) * 40
+            );
+            this.gameEngine.entityManager.createDemonStoonie({ position: randomPosition });
+        });
+        this.overlay.appendChild(addDemonBtn);
+
+        // Add Building buttons
+        const buildingTypes = [
+            { name: 'House', color: '#8B4513' },
+            { name: 'Storage', color: '#CD853F' }
         ];
 
-        tabs.forEach(tab => {
-            const tabButton = document.createElement('button');
-            tabButton.className = 'tab-button';
-            tabButton.dataset.tabId = tab.id;
-            tabButton.textContent = tab.label;
-            tabButton.onclick = () => this.switchTab(tab.id);
-            tabContainer.appendChild(tabButton);
-        });
-
-        // Create content container
-        const contentContainer = document.createElement('div');
-        contentContainer.id = 'content-container';
-        this.overlay.appendChild(contentContainer);
-
-        // Create panel containers
-        tabs.forEach(tab => {
-            const panel = document.createElement('div');
-            panel.id = `${tab.id}-content`;
-            panel.className = 'tab-content';
-            contentContainer.appendChild(panel);
-            this.panels[tab.id] = panel;
+        buildingTypes.forEach(building => {
+            const addBuildingBtn = document.createElement('button');
+            addBuildingBtn.textContent = `+ Add ${building.name}`;
+            addBuildingBtn.style.cssText = buttonStyle + `background: ${building.color};`;
+            const darkerColor = this.adjustColor(building.color, -20);
+            addBuildingBtn.addEventListener('mouseover', () => addBuildingBtn.style.background = darkerColor);
+            addBuildingBtn.addEventListener('mouseout', () => addBuildingBtn.style.background = building.color);
+            addBuildingBtn.addEventListener('click', () => {
+                const randomPosition = new THREE.Vector3(
+                    (Math.random() - 0.5) * 40,
+                    0,
+                    (Math.random() - 0.5) * 40
+                );
+                this.gameEngine.entityManager.createBuilding({
+                    type: building.name.toLowerCase(),
+                    position: randomPosition
+                });
+            });
+            this.overlay.appendChild(addBuildingBtn);
         });
 
         // Initialize stats overlay
@@ -103,7 +141,18 @@ export default class UIManager {
         this.detailsPanel = new DetailsPanel(this.overlay);
 
         this.initialized = true;
-        this.switchTab('selection');
+    }
+
+    adjustColor(color, percent) {
+        const num = parseInt(color.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const G = (num >> 8 & 0x00FF) + amt;
+        const B = (num & 0x0000FF) + amt;
+        return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+            (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+            (B < 255 ? B < 1 ? 0 : B : 255))
+            .toString(16).slice(1);
     }
 
     switchTab(tabId) {
@@ -297,6 +346,20 @@ export default class UIManager {
     }
 
     setupEventListeners() {
+        let ctrlPressed = false;
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Control') {
+                ctrlPressed = true;
+            }
+        });
+
+        document.addEventListener('keyup', (event) => {
+            if (event.key === 'Control') {
+                ctrlPressed = false;
+            }
+        });
+
         // Soul dragging events
         this.panels.souls.addEventListener('mousedown', (event) => {
             const soulItem = event.target.closest('.soul-item');
@@ -306,6 +369,36 @@ export default class UIManager {
                 if (this.draggedSoul) {
                     soulItem.style.opacity = '0.5';
                     this.createDragVisual(event);
+                }
+            }
+        });
+
+        // Example selection logic
+        this.panels.souls.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const soulItem = event.target.closest('.soul-item');
+            if (soulItem) {
+                const soulId = soulItem.dataset.soulId;
+                const entity = this.gameEngine.entityManager.getEntityById(soulId);
+                if (entity) {
+                    if (ctrlPressed) {
+                        console.log(`Toggling selection for ${soulId}`);
+                        // Toggle selection state
+                        entity.toggleSelection();
+                        soulItem.classList.toggle('selected', entity.isSelected);
+                    } else {
+                        console.log(`Selecting only ${soulId}`);
+                        // Clear previous selections
+                        this.panels.souls.querySelectorAll('.soul-item.selected').forEach(item => {
+                            item.classList.remove('selected');
+                            const id = item.dataset.soulId;
+                            const ent = this.gameEngine.entityManager.getEntityById(id);
+                            if (ent) ent.isSelected = false;
+                        });
+                        entity.isSelected = true;
+                        soulItem.classList.add('selected');
+                    }
                 }
             }
         });
@@ -394,6 +487,8 @@ export default class UIManager {
                 this.updateSoulsPanel();
             }
         });
+
+        document.removeEventListener('mouseup', this.mouseUpHandler);
     }
 
     updateHoveredEntity(event) {

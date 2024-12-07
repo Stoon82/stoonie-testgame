@@ -261,12 +261,52 @@ export default class InputManager {
     }
 
     onClick(event) {
-        // Skip if clicking on UI elements
-        if (event.target.closest('#ui-overlay') || 
-            event.target.closest('#stats-overlay') || 
-            event.target.closest('#souls-panel')) {
+        // Skip if over UI elements
+        if (event.target instanceof HTMLElement && 
+            (event.target.id === 'ui-overlay' || 
+             event.target.id === 'stats-overlay' || 
+             event.target.id === 'souls-panel' ||
+             event.target.id === 'debug-overlay' ||
+             event.target.id === 'selection-info-panel')) {
             return;
         }
+
+        // Check if we're in building placement mode
+        if (this.gameEngine.uiOverlay.buildingPlacementMode) {
+            // Get the ground point where we clicked
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(this.normalizedMousePosition, this.gameEngine.camera);
+            
+            // Intersect with the ground plane
+            const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            const intersectionPoint = new THREE.Vector3();
+            raycaster.ray.intersectPlane(groundPlane, intersectionPoint);
+
+            if (intersectionPoint) {
+                // Create the building at the intersection point
+                const buildingType = this.gameEngine.uiOverlay.buildingPlacementMode;
+                this.gameEngine.entityManager.createBuilding({
+                    type: buildingType,
+                    position: intersectionPoint
+                });
+
+                // Exit building placement mode
+                this.gameEngine.uiOverlay.buildingPlacementMode = null;
+                document.body.style.cursor = 'default';
+            }
+            return;
+        }
+
+        // Handle regular click if not in building placement mode
+        if (!this.isDragging && event.button === 0) {
+            const entity = this.getEntityUnderMouse();
+            if (!entity && !this.modifierKeys.ctrl) {
+                // Clear selection only if ctrl is not pressed
+                this.gameEngine.selectionManager.clearSelection();
+            }
+        }
+        
+        this.isDragging = false;
     }
 
     onKeyDown(event) {

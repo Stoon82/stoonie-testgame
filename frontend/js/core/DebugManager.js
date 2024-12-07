@@ -213,27 +213,31 @@ export default class DebugManager {
     }
 
     createEntityDebugVisuals(entity) {
-        // Create velocity arrow
-        const velocityArrow = new THREE.ArrowHelper(
-            entity.velocity.clone().normalize(),
-            entity.position,
-            entity.velocity.length() * 2,
-            0x00ff00
-        );
-        velocityArrow.isDebugObject = true;
-        this.gameEngine.scene.add(velocityArrow);
-        this.debugObjects.set(entity.id + '_velocity', velocityArrow);
+        // Only create velocity arrow for entities with velocity
+        if (entity.velocity) {
+            const velocityArrow = new THREE.ArrowHelper(
+                entity.velocity.clone().normalize(),
+                entity.position,
+                entity.velocity.length() * 2,
+                0x00ff00
+            );
+            velocityArrow.isDebugObject = true;
+            this.gameEngine.scene.add(velocityArrow);
+            this.debugObjects.set(entity.id + '_velocity', velocityArrow);
+        }
 
-        // Create direction arrow (red)
-        const directionArrow = new THREE.ArrowHelper(
-            new THREE.Vector3(0, 0, -1), // default direction
-            entity.position,
-            2, // fixed length
-            0xff0000
-        );
-        directionArrow.isDebugObject = true;
-        this.gameEngine.scene.add(directionArrow);
-        this.debugObjects.set(entity.id + '_direction', directionArrow);
+        // Only create direction arrow for entities that can move
+        if (entity.constructor.name !== 'Building') {
+            const directionArrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 0, -1), // default direction
+                entity.position,
+                2, // fixed length
+                0xff0000
+            );
+            directionArrow.isDebugObject = true;
+            this.gameEngine.scene.add(directionArrow);
+            this.debugObjects.set(entity.id + '_direction', directionArrow);
+        }
     }
 
     showDebugObjects() {

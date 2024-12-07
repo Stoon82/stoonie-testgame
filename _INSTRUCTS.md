@@ -32,6 +32,7 @@
   - Visual selection indicators (rings)
   - Multi-select support with shift key
   - Selection state persistence
+  - **New**: Selection is not cleared when clicking empty space if Ctrl key is held
 
 - **UIManager.js**
   - Mouse interaction handling

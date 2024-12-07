@@ -56,6 +56,20 @@ export class EntityManager {
         return this.spawnEntity('DemonStoonie', config);
     }
 
+    createBuilding({ type, position }) {
+        // Import the Building class
+        import('../environment/Building.js').then(({ default: Building }) => {
+            const building = new Building(this.gameEngine, {
+                x: position.x,
+                z: position.z,
+                type: type
+            });
+            
+            this.addEntity(building);
+            return building;
+        });
+    }
+
     removeEntity(entity) {
         if (this.entities.has(entity.id)) {
             this.scene.remove(entity.getMesh());

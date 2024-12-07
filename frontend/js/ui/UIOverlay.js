@@ -14,64 +14,161 @@ export default class UIOverlay {
     async initialize() {
         console.log('Initializing UIOverlay');
         this.setupUI();
-        this.setupSoulPanel();
         return Promise.resolve();
     }
 
     setupUI() {
-        this.init();
+        this.createSoulDragInterface();
     }
 
-    setupSoulPanel() {
-        // Create soul panel container
+    createSoulDragInterface() {
+        // Create soul panel for dragging souls
         this.soulPanel = document.createElement('div');
         this.soulPanel.id = 'soulPanel';
-        this.soulPanel.style.position = 'absolute';
-        this.soulPanel.style.right = '20px';
-        this.soulPanel.style.top = '20px';
-        this.soulPanel.style.width = '200px';
-        this.soulPanel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        this.soulPanel.style.padding = '10px';
-        this.soulPanel.style.borderRadius = '5px';
-        this.soulPanel.style.color = 'white';
+        this.soulPanel.style.cssText = `
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            z-index: 1000;
+        `;
 
         const title = document.createElement('h3');
-        title.textContent = 'Available Souls';
+        title.textContent = 'Drag Souls';
         title.style.margin = '0 0 10px 0';
         this.soulPanel.appendChild(title);
 
-        // Container for soul items
+        // Container for draggable souls
         this.soulContainer = document.createElement('div');
-        this.soulContainer.style.display = 'flex';
-        this.soulContainer.style.flexDirection = 'column';
-        this.soulContainer.style.gap = '5px';
+        this.soulContainer.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        `;
         this.soulPanel.appendChild(this.soulContainer);
 
         document.body.appendChild(this.soulPanel);
 
         // Setup drag events
-        document.addEventListener('mousemove', this.handleDrag.bind(this));
-        document.addEventListener('mouseup', this.handleDragEnd.bind(this));
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (this.draggedSoul) {
+                const intersects = this.gameEngine.uiManager.getIntersects(e.clientX, e.clientY);
+                this.hoveredStoonie = null;
+
+                for (const intersect of intersects) {
+                    if (intersect.object.entity?.constructor.name === 'Stoonie') {
+                        this.hoveredStoonie = intersect.object.entity;
+                        this.hoveredStoonie.mesh.material.emissive.setHex(0x444444);
+                        break;
+                    }
+                }
+
+                // Remove highlight from non-targets
+                this.gameEngine.entityManager.entities.forEach(entity => {
+                    if (entity !== this.hoveredStoonie && entity.constructor.name === 'Stoonie') {
+                        entity.mesh.material.emissive.setHex(0x000000);
+                    }
+                });
+            }
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (this.draggedSoul && this.hoveredStoonie) {
+                if (this.hoveredStoonie.soul) {
+                    // Disconnect existing soul first
+                    this.gameEngine.soulManager.disconnectSoulFromStoonie(this.hoveredStoonie);
+                }
+                // Connect new soul
+                this.gameEngine.soulManager.connectSoulToStoonie(this.hoveredStoonie, this.draggedSoul);
+            }
+
+            // Clear highlights
+            this.gameEngine.entityManager.entities.forEach(entity => {
+                if (entity.constructor.name === 'Stoonie') {
+                    entity.mesh.material.emissive.setHex(0x000000);
+                }
+            });
+
+            this.draggedSoul = null;
+            this.hoveredStoonie = null;
+        });
+    }
+
+    adjustColor(color, percent) {
+        const num = parseInt(color.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const G = (num >> 8 & 0x00FF) + amt;
+        const B = (num & 0x0000FF) + amt;
+        return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+            (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+            (B < 255 ? B < 1 ? 0 : B : 255))
+            .toString(16).slice(1);
+    }
+
+    createSoulElement(soul) {
+        const soulElement = document.createElement('div');
+        soulElement.className = 'soul-item';
+        soulElement.dataset.soulId = soul.id;
+        soulElement.style.cssText = `
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: grab;
+            user-select: none;
+            transition: background-color 0.3s;
+        `;
+        soulElement.innerHTML = `
+            <div style="font-weight: bold;">Level ${soul.level} Soul</div>
+            <div style="font-size: 0.9em; opacity: 0.8;">XP: ${soul.experience}/${soul.experienceToNextLevel}</div>
+        `;
+
+        soulElement.draggable = true;
+        soulElement.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', soul.id);
+            e.target.style.opacity = '0.5';
+            this.draggedSoul = soul;
+        });
+
+        soulElement.addEventListener('dragend', (e) => {
+            e.target.style.opacity = '1';
+            if (!this.hoveredStoonie) {
+                this.draggedSoul = null;
+            }
+        });
+
+        return soulElement;
+    }
+
+    update() {
+        // Update available souls list
+        if (this.soulContainer) {
+            // Clear existing souls
+            while (this.soulContainer.firstChild) {
+                this.soulContainer.removeChild(this.soulContainer.firstChild);
+            }
+
+            // Add available souls
+            this.gameEngine.soulManager.getAvailableSouls().forEach(soul => {
+                const soulElement = this.createSoulElement(soul);
+                this.soulContainer.appendChild(soulElement);
+            });
+        }
     }
 
     init() {
         this.createMainContainer();
         this.createSpawnButtons();
         this.setupDragEvents();
-    }
-
-    createMainContainer() {
-        // Create UI container
-        this.container = document.createElement('div');
-        this.container.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 1000;
-            display: flex;
-            gap: 10px;
-        `;
-        document.body.appendChild(this.container);
     }
 
     createSpawnButtons() {
@@ -190,27 +287,6 @@ export default class UIOverlay {
         });
     }
 
-    createSoulElement(soul) {
-        const soulElement = document.createElement('div');
-        soulElement.className = 'soul-item';
-        soulElement.style.padding = '5px';
-        soulElement.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-        soulElement.style.borderRadius = '3px';
-        soulElement.style.cursor = 'grab';
-        soulElement.style.userSelect = 'none';
-
-        soulElement.innerHTML = `
-            Level ${soul.level} Soul
-            <div class="soul-exp">XP: ${soul.experience}/${soul.experienceToNextLevel}</div>
-        `;
-
-        soulElement.addEventListener('mousedown', (e) => {
-            this.startDragging(e, soul, soulElement);
-        });
-
-        return soulElement;
-    }
-
     startDragging(e, soul, element) {
         this.draggingSoul = true;
         this.selectedSoul = soul;
@@ -259,23 +335,5 @@ export default class UIOverlay {
             this.draggingSoul = false;
             this.selectedSoul = null;
         }
-    }
-
-    update() {
-        if (!this.gameEngine.soulManager || !this.soulContainer) {
-            return;
-        }
-
-        // Clear existing souls
-        this.soulContainer.innerHTML = '';
-        
-        // Get available souls directly from the availableSouls array
-        const availableSouls = [...this.gameEngine.soulManager.availableSouls];
-        
-        // Create and append soul elements
-        availableSouls.forEach(soul => {
-            const soulElement = this.createSoulElement(soul);
-            this.soulContainer.appendChild(soulElement);
-        });
     }
 }
