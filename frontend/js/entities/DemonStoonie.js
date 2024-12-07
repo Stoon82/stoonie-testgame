@@ -81,13 +81,19 @@ export default class DemonStoonie extends BaseEntity {
 
         // Apply force in that direction
         const force = direction.multiplyScalar(this.maxSpeed * 0.5 * deltaTime);
-        this.applyForce(force);
-
-        // Keep within bounds
-        const bounds = 40;
-        if (Math.abs(this.position.x) > bounds || Math.abs(this.position.z) > bounds) {
-            this.wanderAngle += Math.PI; // Turn around
+        
+        // Check if next position would be out of bounds
+        const nextPos = this.position.clone().add(force);
+        const mapHalfSize = this.gameEngine.worldManager.mapHalfSize;
+        
+        if (Math.abs(nextPos.x) > mapHalfSize || Math.abs(nextPos.z) > mapHalfSize) {
+            // Turn towards center if near bounds
+            const centerDir = new THREE.Vector3(0, 0, 0).sub(this.position).normalize();
+            this.wanderAngle = Math.atan2(centerDir.z, centerDir.x);
+            return;
         }
+        
+        this.applyForce(force);
     }
 
     chase(target, deltaTime) {
@@ -99,10 +105,18 @@ export default class DemonStoonie extends BaseEntity {
         
         // Apply hunting speed multiplier when chasing
         const force = direction.multiplyScalar(this.maxSpeed * this.huntingSpeedMultiplier * deltaTime);
+        
+        // Check if next position would be out of bounds
+        const nextPos = this.position.clone().add(force);
+        const mapHalfSize = this.gameEngine.worldManager.mapHalfSize;
+        
+        if (Math.abs(nextPos.x) > mapHalfSize || Math.abs(nextPos.z) > mapHalfSize) {
+            // If out of bounds, don't apply the force and possibly change target
+            this.target = null;
+            return;
+        }
+        
         this.applyForce(force);
-
-        // Attack all Stoonies in range
-        // this.areaAttack(); // Removed, now called in update()
     }
 
     areaAttack(deltaTime) {

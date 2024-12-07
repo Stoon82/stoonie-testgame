@@ -3,7 +3,11 @@ import MapObject from '../core/MapObject.js';
 
 export default class Tree extends MapObject {
     constructor(gameEngine, config = {}) {
-        super(gameEngine, { x: config.x || 0, y: 0, z: config.z || 0 });
+        super(gameEngine, { 
+            x: config.x || 0, 
+            y: config.y || 0, 
+            z: config.z || 0 
+        });
         this.createModel();
     }
 

@@ -9,10 +9,31 @@ export default class WorldManager {
         this.environmentObjects = new Map();
         this.lastObjectId = 0;
         this.initialized = false;
+        this.terrain = null;
+        this.mapSize = 100; // Size of the terrain
+        this.mapHalfSize = this.mapSize / 2; // Half size for easier bounds checking
     }
 
     generateObjectId() {
         return ++this.lastObjectId;
+    }
+
+    isWithinMapBounds(x, z) {
+        return Math.abs(x) <= this.mapHalfSize && Math.abs(z) <= this.mapHalfSize;
+    }
+
+    getRandomMapPosition() {
+        return {
+            x: (Math.random() * 2 - 1) * this.mapHalfSize,
+            z: (Math.random() * 2 - 1) * this.mapHalfSize
+        };
+    }
+
+    clampToMapBounds(position) {
+        return {
+            x: Math.max(-this.mapHalfSize, Math.min(this.mapHalfSize, position.x)),
+            z: Math.max(-this.mapHalfSize, Math.min(this.mapHalfSize, position.z))
+        };
     }
 
     initialize() {
@@ -101,7 +122,9 @@ export default class WorldManager {
     }
 
     addTree({ x, z }) {
-        const tree = new Tree(this.gameEngine, { x, z });
+        const clampedPos = this.clampToMapBounds({ x, z });
+        const y = this.getTerrainHeight(clampedPos.x, clampedPos.z);
+        const tree = new Tree(this.gameEngine, { x: clampedPos.x, y, z: clampedPos.z });
         const id = this.generateObjectId();
         this.environmentObjects.set(id, tree);
         this.scene.add(tree.mesh);
@@ -109,7 +132,9 @@ export default class WorldManager {
     }
 
     addBuilding(position) {
-        const building = new Building(this.gameEngine, position);
+        const clampedPos = this.clampToMapBounds(position);
+        const y = this.getTerrainHeight(clampedPos.x, clampedPos.z);
+        const building = new Building(this.gameEngine, { ...clampedPos, y });
         const id = this.generateObjectId();
         this.environmentObjects.set(id, building);
         this.scene.add(building.mesh);
@@ -162,9 +187,22 @@ export default class WorldManager {
         const texture = new THREE.CanvasTexture(canvas);
 
         const material = new THREE.MeshStandardMaterial({ map: texture });
-        const terrain = new THREE.Mesh(geometry, material);
-        terrain.rotation.x = -Math.PI / 2;
-        terrain.receiveShadow = true;
-        this.scene.add(terrain);
+        this.terrain = new THREE.Mesh(geometry, material);
+        this.terrain.rotation.x = -Math.PI / 2;
+        this.terrain.receiveShadow = true;
+        this.scene.add(this.terrain);
+    }
+
+    getTerrainHeight(x, z) {
+        const raycaster = new THREE.Raycaster();
+        const startPoint = new THREE.Vector3(x, 100, z);
+        const direction = new THREE.Vector3(0, -1, 0);
+        raycaster.set(startPoint, direction);
+
+        const intersects = raycaster.intersectObject(this.terrain);
+        if (intersects.length > 0) {
+            return intersects[0].point.y;
+        }
+        return 0;
     }
 }

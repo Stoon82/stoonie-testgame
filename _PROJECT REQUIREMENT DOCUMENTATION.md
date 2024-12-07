@@ -19,6 +19,7 @@
 ### WorldManager.js
 - Manages environmental objects
 - Handles world generation and terrain management
+- **New**: Generates terrain mesh using a heightmap and applies textures with colored circles on a white background
 
 ### SelectionManager.js
 - Provides a unified selection system for game objects

@@ -103,6 +103,36 @@ export default class UIOverlay {
         });
     }
 
+    createButton(text, onClick) {
+        const button = document.createElement('button');
+        button.textContent = text;
+        button.style.cssText = `
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        `;
+        button.addEventListener('click', onClick);
+        button.addEventListener('mouseover', () => {
+            button.style.backgroundColor = '#45a049';
+        });
+        button.addEventListener('mouseout', () => {
+            button.style.backgroundColor = '#4CAF50';
+        });
+        return button;
+    }
+
+    getRandomPosition() {
+        const worldSize = 45;
+        return {
+            x: (Math.random() * 2 - 1) * worldSize,
+            z: (Math.random() * 2 - 1) * worldSize
+        };
+    }
+
     adjustColor(color, percent) {
         const num = parseInt(color.replace('#', ''), 16);
         const amt = Math.round(2.55 * percent);

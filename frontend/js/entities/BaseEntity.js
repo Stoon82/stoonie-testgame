@@ -41,6 +41,10 @@ export default class BaseEntity extends MapObject {
         const movement = this.velocity.clone().multiplyScalar(deltaTime);
         this.position.add(movement);
         
+        // Update height based on terrain
+        const terrainHeight = this.gameEngine.worldManager.getTerrainHeight(this.position.x, this.position.z);
+        this.position.y = terrainHeight;
+        
         if (this.mesh) {
             this.mesh.position.copy(this.position);
         }

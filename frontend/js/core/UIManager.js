@@ -82,11 +82,7 @@ export default class UIManager {
         addStoonieBtn.addEventListener('mouseover', () => addStoonieBtn.style.background = '#45a049');
         addStoonieBtn.addEventListener('mouseout', () => addStoonieBtn.style.background = '#4CAF50');
         addStoonieBtn.addEventListener('click', () => {
-            const randomPosition = new THREE.Vector3(
-                (Math.random() - 0.5) * 40,
-                0,
-                (Math.random() - 0.5) * 40
-            );
+            const randomPosition = this.gameEngine.worldManager.getRandomMapPosition();
             this.gameEngine.entityManager.createStoonie({ position: randomPosition });
         });
         this.overlay.appendChild(addStoonieBtn);
@@ -98,14 +94,22 @@ export default class UIManager {
         addDemonBtn.addEventListener('mouseover', () => addDemonBtn.style.background = '#da190b');
         addDemonBtn.addEventListener('mouseout', () => addDemonBtn.style.background = '#f44336');
         addDemonBtn.addEventListener('click', () => {
-            const randomPosition = new THREE.Vector3(
-                (Math.random() - 0.5) * 40,
-                0,
-                (Math.random() - 0.5) * 40
-            );
+            const randomPosition = this.gameEngine.worldManager.getRandomMapPosition();
             this.gameEngine.entityManager.createDemonStoonie({ position: randomPosition });
         });
         this.overlay.appendChild(addDemonBtn);
+
+        // Add Tree button
+        const addTreeBtn = document.createElement('button');
+        addTreeBtn.textContent = '+ Add Tree';
+        addTreeBtn.style.cssText = buttonStyle + 'background: #2E7D32;';
+        addTreeBtn.addEventListener('mouseover', () => addTreeBtn.style.background = '#1B5E20');
+        addTreeBtn.addEventListener('mouseout', () => addTreeBtn.style.background = '#2E7D32');
+        addTreeBtn.addEventListener('click', () => {
+            const randomPosition = this.gameEngine.worldManager.getRandomMapPosition();
+            this.gameEngine.worldManager.addTree(randomPosition);
+        });
+        this.overlay.appendChild(addTreeBtn);
 
         // Add Building buttons
         const buildingTypes = [
@@ -121,11 +125,7 @@ export default class UIManager {
             addBuildingBtn.addEventListener('mouseover', () => addBuildingBtn.style.background = darkerColor);
             addBuildingBtn.addEventListener('mouseout', () => addBuildingBtn.style.background = building.color);
             addBuildingBtn.addEventListener('click', () => {
-                const randomPosition = new THREE.Vector3(
-                    (Math.random() - 0.5) * 40,
-                    0,
-                    (Math.random() - 0.5) * 40
-                );
+                const randomPosition = this.gameEngine.worldManager.getRandomMapPosition();
                 this.gameEngine.entityManager.createBuilding({
                     type: building.name.toLowerCase(),
                     position: randomPosition

@@ -20,6 +20,22 @@ export default class MapObject {
         }
     }
 
+    setPositionOnTerrain(x, y) {
+        const raycaster = new THREE.Raycaster();
+        const down = new THREE.Vector3(0, -1, 0);
+        raycaster.set(new THREE.Vector3(x, 100, y), down);
+
+        const intersects = raycaster.intersectObject(this.gameEngine.worldManager.terrain);
+
+        if (intersects.length > 0) {
+            const z = intersects[0].point.y;
+            this.setPosition(x, y, z);
+        } else {
+            console.warn('No intersection with terrain found.');
+            this.setPosition(x, y, 0);
+        }
+    }
+
     createModel() {
         // To be implemented by child classes
         console.warn('createModel() should be implemented by child classes');

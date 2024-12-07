@@ -136,19 +136,38 @@ export default class Stoonie extends BaseEntity {
     }
 
     flee(deltaTime) {
-        if (this.nearbyDemons.length === 0) return;
+        if (this.nearbyDemons.length === 0) {
+            this.behaviorState = 'wander';
+            return;
+        }
 
-        // Calculate average direction to flee from all nearby demons
-        const fleeDirection = new THREE.Vector3();
-        this.nearbyDemons.forEach(({ demon }) => {
-            const awayFromDemon = new THREE.Vector3().subVectors(this.position, demon.position).normalize();
-            fleeDirection.add(awayFromDemon);
+        // Calculate average position of nearby demons
+        const avgDemonPos = new THREE.Vector3();
+        this.nearbyDemons.forEach(demon => {
+            avgDemonPos.add(demon.position);
         });
-        fleeDirection.normalize();
+        avgDemonPos.divideScalar(this.nearbyDemons.length);
 
-        // Apply fleeing force
-        const fleeSpeed = this.maxSpeed * (this.soul && this.soul.powers.has('speedBoost') ? 1.5 : 1);
-        const force = fleeDirection.multiplyScalar(fleeSpeed * deltaTime);
+        // Calculate flee direction (away from demons)
+        const fleeDirection = new THREE.Vector3()
+            .subVectors(this.position, avgDemonPos)
+            .normalize();
+
+        // Apply force in flee direction
+        const force = fleeDirection.multiplyScalar(this.maxSpeed * 1.5 * deltaTime);
+        
+        // Check if next position would be out of bounds
+        const nextPos = this.position.clone().add(force);
+        const mapHalfSize = this.gameEngine.worldManager.mapHalfSize;
+        
+        if (Math.abs(nextPos.x) > mapHalfSize * 0.95 || Math.abs(nextPos.z) > mapHalfSize * 0.95) {
+            // If near bounds, move along the boundary
+            const tangent = new THREE.Vector3(-fleeDirection.z, 0, fleeDirection.x);
+            const newForce = tangent.multiplyScalar(this.maxSpeed * deltaTime);
+            this.applyForce(newForce);
+            return;
+        }
+        
         this.applyForce(force);
     }
 
@@ -416,28 +435,31 @@ export default class Stoonie extends BaseEntity {
     }
 
     wander(deltaTime) {
-        // Update wander angle with smoother randomness
-        this.wanderAngle += (Math.random() - 0.5) * Math.PI * deltaTime;
+        // Update wander angle with more variation
+        this.wanderAngle += (Math.random() - 0.5) * 4 * deltaTime;
 
         // Calculate movement direction
         const direction = new THREE.Vector3(
             Math.cos(this.wanderAngle),
             0,
             Math.sin(this.wanderAngle)
-        ).normalize();
+        );
 
         // Apply force in that direction
-        const wanderForce = direction.multiplyScalar(this.maxSpeed);
-        this.applyForce(wanderForce);
-
-        // Keep within bounds
-        const bounds = 40;
-        if (Math.abs(this.position.x) > bounds || Math.abs(this.position.z) > bounds) {
-            // Calculate direction to center
-            const toCenter = new THREE.Vector3().sub(this.position).normalize();
-            const boundsForce = toCenter.multiplyScalar(this.maxSpeed * 2);
-            this.applyForce(boundsForce);
+        const force = direction.multiplyScalar(this.maxSpeed * deltaTime);
+        
+        // Check if next position would be out of bounds
+        const nextPos = this.position.clone().add(force);
+        const mapHalfSize = this.gameEngine.worldManager.mapHalfSize;
+        
+        if (Math.abs(nextPos.x) > mapHalfSize * 0.95 || Math.abs(nextPos.z) > mapHalfSize * 0.95) {
+            // Turn towards center if near bounds
+            const centerDir = new THREE.Vector3(0, 0, 0).sub(this.position).normalize();
+            this.wanderAngle = Math.atan2(centerDir.z, centerDir.x);
+            return;
         }
+        
+        this.applyForce(force);
     }
 
     mate(otherStoonie) {

@@ -26,6 +26,10 @@
   - World generation and updates
   - Terrain and obstacle placement
   - Resource management
+  - **New**: Generates terrain mesh using a heightmap and applies textures with colored circles on a white background
+  - **Terrain System**: Utilizes Perlin noise for natural terrain generation
+  - **Texture Creation**: Employs a custom shader to create detailed textures with varied colors and patterns
+  - **Terrain Features**: Includes hills, valleys, and plateaus for diverse environments
 
 - **SelectionManager.js**
   - Unified selection system for all game objects
