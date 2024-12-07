@@ -142,19 +142,18 @@ export default class InputManager {
         this.updateModifierKeys(event);
         this.updateMousePosition();
 
-        // Handle entity selection only on left click
+        // Handle entity selection or start panning on left click
         if (event.button === 0) {
             const entity = this.getEntityUnderMouse(event);
             if (entity) {
+                // If over an entity, handle selection
                 this.gameEngine.selectionManager.toggleSelection(entity, this.modifierKeys.shift);
-            } else if (!this.modifierKeys.shift) {
-                this.gameEngine.selectionManager.clearSelection();
             }
-        }
-
-        // Let right-click events pass through to OrbitControls
-        if (event.button === 2) {
-            return;
+            // If not over an entity and not holding shift, clear selection and prepare for panning
+            else if (!this.modifierKeys.shift) {
+                this.gameEngine.selectionManager.clearSelection();
+                this.isDragging = true;
+            }
         }
     }
 
@@ -173,20 +172,84 @@ export default class InputManager {
             return;
         }
 
-        // Let right-click drag events pass through to OrbitControls
-        if (this.isMouseDown && this.mouseButton === 2) {
-            return;
+        if (this.isMouseDown) {
+            const camera = this.gameEngine.camera;
+            if (!camera) return;
+
+            // Calculate mouse movement
+            const movementX = event.clientX - this.lastDragPosition.x;
+            const movementY = event.clientY - this.lastDragPosition.y;
+            
+            // Update last position
+            this.lastDragPosition = { x: event.clientX, y: event.clientY };
+
+            // Right mouse button: Rotate camera
+            if (this.mouseButton === 2) {
+                const rotateAmount = this.rotateSpeed * 0.01;
+                const controls = this.gameEngine.controls;
+                
+                // Horizontal rotation (around target point)
+                const targetLeft = controls.target;
+                const radiusLeft = camera.position.distanceTo(targetLeft);
+                const currentAngleLeft = Math.atan2(
+                    camera.position.x - targetLeft.x,
+                    camera.position.z - targetLeft.z
+                );
+                const newAngleLeft = currentAngleLeft + (movementX * rotateAmount);
+                
+                camera.position.x = targetLeft.x + radiusLeft * Math.sin(newAngleLeft);
+                camera.position.z = targetLeft.z + radiusLeft * Math.cos(newAngleLeft);
+
+                // Vertical rotation (around target point)
+                const radiusUp = camera.position.distanceTo(targetLeft);
+                const heightUp = camera.position.y - targetLeft.y;
+                const groundDistanceUp = Math.sqrt(
+                    Math.pow(camera.position.x - targetLeft.x, 2) +
+                    Math.pow(camera.position.z - targetLeft.z, 2)
+                );
+                
+                // Calculate new height and ground distance
+                const angle = Math.atan2(heightUp, groundDistanceUp);
+                const newAngleUp = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, angle + (movementY * rotateAmount)));
+                const newHeightUp = radiusUp * Math.sin(newAngleUp);
+                const newGroundDistanceUp = radiusUp * Math.cos(newAngleUp);
+                
+                // Update camera position
+                const directionUp = new THREE.Vector3(
+                    camera.position.x - targetLeft.x,
+                    0,
+                    camera.position.z - targetLeft.z
+                ).normalize();
+                
+                camera.position.x = targetLeft.x + directionUp.x * newGroundDistanceUp;
+                camera.position.y = targetLeft.y + newHeightUp;
+                camera.position.z = targetLeft.z + directionUp.z * newGroundDistanceUp;
+
+                // Make camera look at target
+                camera.lookAt(targetLeft);
+            }
+            // Middle mouse button, Left mouse button (when not over entity), or Left + Ctrl: Pan camera
+            else if (this.mouseButton === 1 || 
+                    (this.mouseButton === 0 && this.isDragging) || 
+                    (this.mouseButton === 0 && this.modifierKeys.ctrl)) {
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                const moveAmount = this.panSpeed * 0.01;
+
+                // Calculate movement vectors
+                const rightMove = movementX * moveAmount;
+                const forwardMove = movementY * moveAmount;
+
+                // Update camera and target positions
+                camera.position.addScaledVector(right, -rightMove);
+                camera.position.addScaledVector(forward, forwardMove);
+                this.gameEngine.controls.target.addScaledVector(right, -rightMove);
+                this.gameEngine.controls.target.addScaledVector(forward, forwardMove);
+            }
         }
     }
 
     onMouseUp(event) {
-        // Let right-click events pass through to OrbitControls
-        if (event.button === 2) {
-            this.isMouseDown = false;
-            this.mouseButton = null;
-            return;
-        }
-
         this.isMouseDown = false;
         this.mouseButton = null;
         this.isDragging = false;
