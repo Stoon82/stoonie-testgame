@@ -19,6 +19,8 @@ export default class WorldManager {
         if (this.initialized) return;
         console.log('Initializing WorldManager');
 
+        this.createTerrain();
+
         // Create ground
         const groundGeometry = new THREE.PlaneGeometry(100, 100);
         const groundMaterial = new THREE.MeshStandardMaterial({ 
@@ -124,5 +126,45 @@ export default class WorldManager {
             this.scene.remove(object.mesh);
             this.environmentObjects.delete(id);
         }
+    }
+
+    createTerrain() {
+        const size = 100;
+        const segments = 50;
+        const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
+
+        // Generate heightmap
+        const positionAttribute = geometry.attributes.position;
+        for (let i = 0; i < positionAttribute.count; i++) {
+            const zIndex = i * 3 + 2; // The Z component is the third in the array
+            positionAttribute.array[zIndex] = Math.random() * 5; // Random height
+        }
+
+        geometry.computeVertexNormals();
+
+        // Create texture
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 512;
+        const context = canvas.getContext('2d');
+
+        // Set white background
+        context.fillStyle = 'white';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw circles
+        for (let i = 0; i < 100; i++) {
+            context.beginPath();
+            context.arc(Math.random() * 512, Math.random() * 512, Math.random() * 20 + 10, 0, Math.PI * 2);
+            context.fillStyle = `hsl(${Math.random() * 360}, 50%, 50%)`;
+            context.fill();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+
+        const material = new THREE.MeshStandardMaterial({ map: texture });
+        const terrain = new THREE.Mesh(geometry, material);
+        terrain.rotation.x = -Math.PI / 2;
+        terrain.receiveShadow = true;
+        this.scene.add(terrain);
     }
 }
