@@ -29,9 +29,8 @@ export default class VicinityManager {
 
     checkAllInteractions(entities) {
         const stoonies = entities.filter(e => e.constructor.name === 'Stoonie');
-        const demons = entities.filter(e => e.constructor.name === 'DemonStoonie');
 
-        // Check Stoonie-Stoonie interactions
+        // Check Stoonie-Stoonie interactions for reproduction only
         for (let i = 0; i < stoonies.length; i++) {
             const stoonie1 = stoonies[i];
             
@@ -48,23 +47,12 @@ export default class VicinityManager {
                     this.handleStoonieInteraction(stoonie1, stoonie2);
                 }
             }
-
-            // Check for demon encounters
-            for (const demon of demons) {
-                if (demon.isDead()) continue;
-                
-                const distance = stoonie1.position.distanceTo(demon.position);
-                if (distance <= this.combatRange) {
-                    this.handleDemonInteraction(stoonie1, demon);
-                }
-            }
         }
     }
 
     handleStoonieInteraction(stoonie1, stoonie2) {
         // Skip if either Stoonie is already pregnant
         if (stoonie1.isPregnant || stoonie2.isPregnant) {
-            console.log(`Skipping reproduction - one of the Stoonies is already pregnant (${stoonie1.id}, ${stoonie2.id})`);
             return;
         }
 
@@ -79,46 +67,7 @@ export default class VicinityManager {
                 const femaleStoonie = stoonie1.gender === 'female' ? stoonie1 : stoonie2;
                 console.log(`Stoonies #${stoonie1.id} (${stoonie1.gender}) and #${stoonie2.id} (${stoonie2.gender}) are reproducing!`);
                 this.gameEngine.needsManager.startPregnancy(femaleStoonie.id);
-            } else {
-                console.log(`Reproduction check failed for Stoonies #${stoonie1.id} and #${stoonie2.id} - random chance`);
             }
-        } else {
-            console.log(`Reproduction requirements not met for Stoonies #${stoonie1.id} and #${stoonie2.id}`);
-            console.log(`Gender: ${stoonie1.gender}/${stoonie2.gender}, Age: ${stoonie1.age}/${stoonie2.age}, Health: ${stoonie1.health}/${stoonie2.health}`);
         }
-    }
-
-    handleDemonInteraction(stoonie, demon) {
-        // Skip if either entity is already engaged in combat
-        if (stoonie.inCombat || demon.inCombat) {
-            console.log(`Skipping combat - entities already in combat (Stoonie #${stoonie.id}, Demon #${demon.id})`);
-            return;
-        }
-
-        console.log(`Combat initiated between Stoonie #${stoonie.id} and Demon #${demon.id}!`);
-
-        // Demon attacks Stoonie
-        const damage = Math.random() * 30 + 15; // Increased damage range to 15-45
-        console.log(`Demon #${demon.id} deals ${damage.toFixed(1)} damage to Stoonie #${stoonie.id}`);
-        stoonie.damage(damage);
-
-        // If Stoonie has a soul, it can fight back
-        if (stoonie.soul) {
-            const soulPower = stoonie.soul.level * 7; // Increased soul power multiplier
-            const counterDamage = Math.random() * soulPower + soulPower/2;
-            console.log(`Stoonie #${stoonie.id}'s soul (level ${stoonie.soul.level}) deals ${counterDamage.toFixed(1)} damage to Demon #${demon.id}!`);
-            demon.damage(counterDamage);
-        } else {
-            console.log(`Stoonie #${stoonie.id} has no soul to fight back with!`);
-        }
-
-        // Mark both as in combat briefly
-        stoonie.inCombat = true;
-        demon.inCombat = true;
-        setTimeout(() => {
-            stoonie.inCombat = false;
-            demon.inCombat = false;
-            console.log(`Combat cooldown ended for Stoonie #${stoonie.id} and Demon #${demon.id}`);
-        }, 2000); // Combat cooldown of 2 seconds
     }
 }
