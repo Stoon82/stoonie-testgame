@@ -41,10 +41,50 @@ export default class WorldManager {
         directionalLight.castShadow = true;
         this.scene.add(directionalLight);
 
-        // Add some initial environment objects
-        this.addTree({ x: 5, z: 5 });
-        this.addTree({ x: -8, z: 3 });
-        this.addBuilding({ x: -15, z: -15 });
+        // Add random trees and buildings
+        const worldSize = 45; // Keep objects within a 90x90 area
+        const numTrees = 20;
+        const numBuildings = 5;
+        const minDistance = 5; // Minimum distance between objects
+
+        // Helper function to get random position
+        const getRandomPosition = () => ({
+            x: (Math.random() * 2 - 1) * worldSize,
+            z: (Math.random() * 2 - 1) * worldSize
+        });
+
+        // Helper function to check if position is too close to existing objects
+        const isTooClose = (pos) => {
+            for (const obj of this.environmentObjects.values()) {
+                const dx = obj.mesh.position.x - pos.x;
+                const dz = obj.mesh.position.z - pos.z;
+                const distSq = dx * dx + dz * dz;
+                if (distSq < minDistance * minDistance) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        // Add trees
+        for (let i = 0; i < numTrees; i++) {
+            let position;
+            do {
+                position = getRandomPosition();
+            } while (isTooClose(position));
+            
+            this.addTree(position);
+        }
+
+        // Add buildings
+        for (let i = 0; i < numBuildings; i++) {
+            let position;
+            do {
+                position = getRandomPosition();
+            } while (isTooClose(position));
+            
+            this.addBuilding(position);
+        }
 
         this.initialized = true;
     }

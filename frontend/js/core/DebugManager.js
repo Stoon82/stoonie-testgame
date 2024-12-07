@@ -9,11 +9,12 @@ export default class DebugManager {
         this.frameCount = 0;
         this.lastTime = performance.now();
         this.fps = 0;
-        
-        this.init();
+        this.raycastLine = null;
+        this.raycastFrameCount = 0;  // Track frames since last raycast
     }
 
-    init() {
+    async initialize() {
+        console.log('Initializing DebugManager');
         // Create debug overlay
         this.createDebugOverlay();
         
@@ -29,6 +30,8 @@ export default class DebugManager {
                 this.deactivate();
             }
         });
+
+        return Promise.resolve();
     }
 
     createDebugOverlay() {
@@ -54,61 +57,241 @@ export default class DebugManager {
 
     activate() {
         this.isActive = true;
-        this.debugOverlay.style.display = 'block';
+        if (this.debugOverlay) {
+            this.debugOverlay.style.display = 'block';
+        }
         this.showDebugObjects();
     }
 
     deactivate() {
+        this.endDebugMode();
+    }
+
+    endDebugMode() {
+        // Set state to inactive
         this.isActive = false;
-        this.debugOverlay.style.display = 'none';
-        this.hideDebugObjects();
+        
+        // Hide debug overlay
+        if (this.debugOverlay) {
+            this.debugOverlay.style.display = 'none';
+        }
+
+        // Clear all debug visuals
+        this.clearAllDebugVisuals();
+    }
+
+    clearAllDebugVisuals() {
+        // First, remove all tracked debug objects
+        this.debugObjects.forEach((object, key) => {
+            if (object) {
+                // Remove from scene
+                if (object.parent) {
+                    object.parent.remove(object);
+                }
+                
+                // Dispose of resources
+                if (object.geometry) {
+                    object.geometry.dispose();
+                }
+                if (object.material) {
+                    if (Array.isArray(object.material)) {
+                        object.material.forEach(mat => {
+                            if (mat.map) mat.map.dispose();
+                            mat.dispose();
+                        });
+                    } else {
+                        if (object.material.map) object.material.map.dispose();
+                        object.material.dispose();
+                    }
+                }
+
+                // Special cleanup for ArrowHelper
+                if (object instanceof THREE.ArrowHelper) {
+                    if (object.line) {
+                        if (object.line.geometry) object.line.geometry.dispose();
+                        if (object.line.material) object.line.material.dispose();
+                    }
+                    if (object.cone) {
+                        if (object.cone.geometry) object.cone.geometry.dispose();
+                        if (object.cone.material) object.cone.material.dispose();
+                    }
+                }
+            }
+        });
+        
+        // Clear all tracked objects
+        this.debugObjects.clear();
+        
+        // Clear raycast visualization
+        this.clearRaycastVisualization();
+        
+        // Find and remove any remaining debug objects in the scene
+        const objectsToRemove = [];
+        this.gameEngine.scene.traverse((object) => {
+            if (object.isDebugObject) {
+                objectsToRemove.push(object);
+            }
+        });
+        
+        // Remove and dispose of found objects
+        objectsToRemove.forEach(object => {
+            if (object.parent) {
+                object.parent.remove(object);
+            }
+            
+            if (object.geometry) {
+                object.geometry.dispose();
+            }
+            if (object.material) {
+                if (Array.isArray(object.material)) {
+                    object.material.forEach(mat => {
+                        if (mat.map) mat.map.dispose();
+                        mat.dispose();
+                    });
+                } else {
+                    if (object.material.map) object.material.map.dispose();
+                    object.material.dispose();
+                }
+            }
+            
+            // Special cleanup for ArrowHelper
+            if (object instanceof THREE.ArrowHelper) {
+                if (object.line) {
+                    if (object.line.geometry) object.line.geometry.dispose();
+                    if (object.line.material) object.line.material.dispose();
+                }
+                if (object.cone) {
+                    if (object.cone.geometry) object.cone.geometry.dispose();
+                    if (object.cone.material) object.cone.material.dispose();
+                }
+            }
+        });
+
+        // Clean up debug objects attached to Stoonies
+        this.gameEngine.entityManager.entities.forEach(entity => {
+            if (entity.mesh) {
+                entity.mesh.traverse((object) => {
+                    if (object.isDebugObject) {
+                        if (object.parent) {
+                            object.parent.remove(object);
+                        }
+                        
+                        if (object.geometry) {
+                            object.geometry.dispose();
+                        }
+                        if (object.material) {
+                            if (Array.isArray(object.material)) {
+                                object.material.forEach(mat => {
+                                    if (mat.map) mat.map.dispose();
+                                    mat.dispose();
+                                });
+                            } else {
+                                if (object.material.map) object.material.map.dispose();
+                                object.material.dispose();
+                            }
+                        }
+                        
+                        // Special cleanup for ArrowHelper
+                        if (object instanceof THREE.ArrowHelper) {
+                            if (object.line) {
+                                if (object.line.geometry) object.line.geometry.dispose();
+                                if (object.line.material) object.line.material.dispose();
+                            }
+                            if (object.cone) {
+                                if (object.cone.geometry) object.cone.geometry.dispose();
+                                if (object.cone.material) object.cone.material.dispose();
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        // Reset state
+        this.raycastLine = null;
+        this.raycastFrameCount = 0;
+    }
+
+    createEntityDebugVisuals(entity) {
+        // Create velocity arrow
+        const velocityArrow = new THREE.ArrowHelper(
+            entity.velocity.clone().normalize(),
+            entity.position,
+            entity.velocity.length() * 2,
+            0x00ff00
+        );
+        velocityArrow.isDebugObject = true;
+        this.gameEngine.scene.add(velocityArrow);
+        this.debugObjects.set(entity.id + '_velocity', velocityArrow);
+
+        // Create direction arrow (red)
+        const directionArrow = new THREE.ArrowHelper(
+            new THREE.Vector3(0, 0, -1), // default direction
+            entity.position,
+            2, // fixed length
+            0xff0000
+        );
+        directionArrow.isDebugObject = true;
+        this.gameEngine.scene.add(directionArrow);
+        this.debugObjects.set(entity.id + '_direction', directionArrow);
     }
 
     showDebugObjects() {
-        // Show debug visuals for all entities
+        if (!this.isActive) return;
+
+        // Create debug visuals for each entity
         this.gameEngine.entityManager.entities.forEach(entity => {
             this.createEntityDebugVisuals(entity);
         });
     }
 
     hideDebugObjects() {
-        // Remove all debug visuals
-        this.debugObjects.forEach(obj => {
-            if (obj.parent) {
-                obj.parent.remove(obj);
+        this.debugObjects.forEach((object) => {
+            if (object && object.parent) {
+                object.parent.remove(object);
             }
         });
-        this.debugObjects.clear();
     }
 
-    createEntityDebugVisuals(entity) {
-        // Create direction indicator
-        const directionArrow = new THREE.ArrowHelper(
-            new THREE.Vector3(0, 0, 1),
-            entity.position,
-            1,
-            0xffff00
-        );
-        entity.mesh.add(directionArrow);
-        this.debugObjects.set(entity.id + '_direction', directionArrow);
+    clearRaycastVisualization() {
+        if (this.raycastLine) {
+            // Remove from scene if it's there
+            if (this.raycastLine.parent) {
+                this.raycastLine.parent.remove(this.raycastLine);
+            }
+            
+            // Dispose of geometry and material
+            if (this.raycastLine.geometry) {
+                this.raycastLine.geometry.dispose();
+            }
+            if (this.raycastLine.material) {
+                if (this.raycastLine.material.map) {
+                    this.raycastLine.material.map.dispose();
+                }
+                this.raycastLine.material.dispose();
+            }
+            
+            // Clear the reference
+            this.raycastLine = null;
+            this.raycastFrameCount = 0;
+        }
+    }
 
-        // Create velocity vector
-        const velocityArrow = new THREE.ArrowHelper(
-            entity.velocity.clone().normalize(),
-            entity.position,
-            entity.velocity.length(),
-            0x00ff00
-        );
-        entity.mesh.add(velocityArrow);
-        this.debugObjects.set(entity.id + '_velocity', velocityArrow);
+    createRaycastLine() {
+        // Don't create new raycasts if debug mode is off
+        if (!this.isActive) return null;
 
-        // Create interaction radius
-        const radiusGeometry = new THREE.CircleGeometry(1.5, 32);
-        const radiusMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
-        const radiusLine = new THREE.LineLoop(radiusGeometry, radiusMaterial);
-        radiusLine.rotation.x = -Math.PI / 2;
-        entity.mesh.add(radiusLine);
-        this.debugObjects.set(entity.id + '_radius', radiusLine);
+        const material = new THREE.LineBasicMaterial({ 
+            color: 0xff0000,
+            transparent: true,
+            opacity: 0.5
+        });
+        const geometry = new THREE.BufferGeometry();
+        const line = new THREE.Line(geometry, material);
+        line.isDebugObject = true;  // Mark as debug object for cleanup
+        this.gameEngine.scene.add(line);
+        this.raycastLine = line;
+        return line;
     }
 
     updateDebugVisuals() {
@@ -133,6 +316,29 @@ export default class DebugManager {
         });
     }
 
+    updateRaycastVisualization(start, end) {
+        // Only create new raycasts in debug mode
+        if (!this.isActive) {
+            this.clearRaycastVisualization();
+            return;
+        }
+
+        if (!this.raycastLine) {
+            this.createRaycastLine();
+        }
+
+        if (!this.raycastLine) return;
+
+        const points = new Float32Array([
+            start.x, start.y, start.z,
+            end.x, end.y, end.z
+        ]);
+
+        this.raycastLine.geometry.setAttribute('position', new THREE.BufferAttribute(points, 3));
+        this.raycastLine.geometry.attributes.position.needsUpdate = true;
+        this.raycastFrameCount = 1;
+    }
+
     updateFPS() {
         this.frameCount++;
         const currentTime = performance.now();
@@ -145,7 +351,7 @@ export default class DebugManager {
         }
     }
 
-    getDebugInfo() {
+    getEntityStats() {
         const entityManager = this.gameEngine.entityManager;
         const entities = Array.from(entityManager.entities.values());
         
@@ -156,28 +362,76 @@ export default class DebugManager {
         const pregnant = females.filter(f => f.isPregnant);
 
         return `
-            <div style="color: #00ff00">FPS: ${this.fps}</div>
-            <div style="margin-top: 10px; color: #ffffff">Entity Count:</div>
-            <div>Total Entities: ${entities.length}</div>
-            <div>Stoonies: ${stoonies.length} (♂${males.length} ♀${females.length})</div>
+            <div>Total Stoonies: ${stoonies.length}</div>
+            <div>Males: ${males.length}</div>
+            <div>Females: ${females.length}</div>
             <div>Pregnant: ${pregnant.length}</div>
             <div>Demons: ${demons.length}</div>
-            
-            <div style="margin-top: 10px; color: #ffffff">Controls:</div>
-            <div>Hold Shift: Show Debug Info</div>
-            
-            <div style="margin-top: 10px; color: #ffffff">Visual Indicators:</div>
-            <div><span style="color: #ffff00">→</span> Entity Direction</div>
-            <div><span style="color: #00ff00">→</span> Velocity Vector</div>
-            <div><span style="color: #ff0000">○</span> Interaction Radius</div>
         `;
     }
 
-    update() {
-        if (!this.isActive) return;
+    update(deltaTime) {
+        if (this.isActive) {
+            // Clear existing debug visuals before updating
+            this.clearAllDebugVisuals();
+            
+            // Create new debug visuals
+            this.showDebugObjects();
+            
+            this.updateFPS();
+            this.updateDebugVisuals();
+            
+            // Get latest mouse position from input manager
+            const inputManager = this.gameEngine.inputManager;
+            if (!inputManager || !inputManager.initialized) {
+                console.warn('Debug: InputManager not available');
+                return;
+            }
+            
+            // Force a mouse position update
+            inputManager.updateMousePosition();
+            
+            // Get hovered entity
+            const hoveredEntity = inputManager.getEntityUnderMouse();
+            
+            // Update debug overlay with latest info
+            if (this.debugOverlay) {
+                const mousePos = inputManager.mousePosition;
+                const normalizedPos = inputManager.normalizedMousePosition;
+                const clientPos = { x: inputManager.lastClientX, y: inputManager.lastClientY };
+                
+                let hoveredInfo = 'None';
+                if (hoveredEntity) {
+                    hoveredInfo = `${hoveredEntity.constructor.name} (ID: ${hoveredEntity.id})`;
+                    if (hoveredEntity.constructor.name === 'Stoonie') {
+                        hoveredInfo += `\nGender: ${hoveredEntity.gender}`;
+                        hoveredInfo += `\nHealth: ${hoveredEntity.health.toFixed(1)}`;
+                        if (hoveredEntity.isPregnant) {
+                            hoveredInfo += '\nPregnant';
+                        }
+                    }
+                }
+                
+                this.debugOverlay.innerHTML = `
+                    <div style="color: #00ff00">FPS: ${this.fps}</div>
+                    <div style="margin-top: 10px; color: #ffffff">Mouse Position:</div>
+                    <div>Client: ${Math.round(clientPos.x)}, ${Math.round(clientPos.y)}</div>
+                    <div>Canvas: ${Math.round(mousePos.x)}, ${Math.round(mousePos.y)}</div>
+                    <div>Normalized: ${normalizedPos.x.toFixed(3)}, ${normalizedPos.y.toFixed(3)}</div>
+                    <div style="margin-top: 10px; color: #ffffff">Hovered Entity:</div>
+                    <div style="white-space: pre-line">${hoveredInfo}</div>
+                    <div style="margin-top: 10px; color: #ffffff">Entity Count:</div>
+                    ${this.getEntityStats()}
+                `;
+            }
+        }
 
-        this.updateFPS();
-        this.updateDebugVisuals();
-        this.debugOverlay.innerHTML = this.getDebugInfo();
+        // Always handle raycast cleanup, regardless of debug mode
+        if (this.raycastFrameCount > 0) {
+            this.raycastFrameCount++;
+            if (this.raycastFrameCount > 2) {
+                this.clearRaycastVisualization();
+            }
+        }
     }
 }

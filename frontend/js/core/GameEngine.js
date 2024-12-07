@@ -5,9 +5,11 @@ import SoulManager from './SoulManager.js';
 import UIManager from './UIManager.js';
 import DebugManager from './DebugManager.js';
 import UIOverlay from '../ui/UIOverlay.js';
-import InitManager from './InitManager.js';
 import NeedsManager from './NeedsManager.js';
 import VicinityManager from './VicinityManager.js';
+import InitManager from './InitManager.js';
+import SelectionManager from './SelectionManager.js';
+import InputManager from './InputManager.js';
 
 export default class GameEngine {
     constructor() {
@@ -16,6 +18,7 @@ export default class GameEngine {
         this.renderer = null;
         this.clock = new THREE.Clock();
         this.raycaster = new THREE.Raycaster();
+        this.age = 0; // Add game age tracking
         
         // Initialize all managers
         this.initManager = new InitManager(this);
@@ -25,8 +28,10 @@ export default class GameEngine {
         this.uiManager = new UIManager(this);
         this.debugManager = new DebugManager(this);
         this.uiOverlay = new UIOverlay(this);
-        this.needsManager = new NeedsManager();
+        this.needsManager = new NeedsManager(this);
         this.vicinityManager = new VicinityManager(this);
+        this.selectionManager = new SelectionManager(this);
+        this.inputManager = new InputManager(this);
         
         this.selectedEntity = null;
         this.initialized = false;
@@ -40,6 +45,8 @@ export default class GameEngine {
         this.initManager.registerManager('uiOverlay', this.uiOverlay);
         this.initManager.registerManager('needsManager', this.needsManager);
         this.initManager.registerManager('vicinityManager', this.vicinityManager);
+        this.initManager.registerManager('selectionManager', this.selectionManager);
+        this.initManager.registerManager('inputManager', this.inputManager);
     }
 
     async initialize() {
@@ -58,7 +65,7 @@ export default class GameEngine {
             window.addEventListener('resize', this.onWindowResize.bind(this));
 
             this.initialized = true;
-            this.animate();
+            this.update();
         } catch (error) {
             console.error('Failed to initialize game:', error);
             throw error;
@@ -67,10 +74,21 @@ export default class GameEngine {
 
     setupRenderer() {
         // Initialize renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            alpha: true // Enable transparency
+        });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(this.renderer.domElement);
+
+        // Set renderer DOM element properties
+        this.renderer.domElement.style.position = 'absolute';
+        this.renderer.domElement.style.top = '0';
+        this.renderer.domElement.style.left = '0';
+        this.renderer.domElement.style.zIndex = '0';
     }
 
     setupCamera() {
@@ -81,7 +99,7 @@ export default class GameEngine {
             0.1,
             1000
         );
-        this.camera.position.set(0, 10, 20);
+        this.camera.position.set(0, 15, 20);
         this.camera.lookAt(0, 0, 0);
     }
 
@@ -97,40 +115,24 @@ export default class GameEngine {
         if (!this.initialized) return;
 
         const deltaTime = this.clock.getDelta();
+        this.age += deltaTime;
 
         // Update all managers
-        if (this.worldManager && typeof this.worldManager.update === 'function') {
-            this.worldManager.update(deltaTime);
-        }
-        if (this.entityManager && typeof this.entityManager.update === 'function') {
-            this.entityManager.update(deltaTime);
-        }
-        if (this.soulManager && typeof this.soulManager.update === 'function') {
-            this.soulManager.update(deltaTime);
-        }
-        if (this.needsManager && typeof this.needsManager.update === 'function') {
-            this.needsManager.update(deltaTime);
-        }
-        if (this.vicinityManager && typeof this.vicinityManager.update === 'function') {
-            this.vicinityManager.update(deltaTime);
-        }
-        if (this.uiManager && typeof this.uiManager.update === 'function') {
-            this.uiManager.update(deltaTime);
-        }
-        if (this.debugManager && typeof this.debugManager.update === 'function') {
-            this.debugManager.update(deltaTime);
-        }
-        if (this.uiOverlay && typeof this.uiOverlay.update === 'function') {
-            this.uiOverlay.update(deltaTime);
-        }
-    }
+        this.inputManager.update(deltaTime);
+        this.worldManager.update(deltaTime);
+        this.entityManager.update(deltaTime);
+        this.needsManager.update(deltaTime);
+        this.vicinityManager.update(deltaTime);
+        this.uiManager.update(deltaTime);
+        this.debugManager.update(deltaTime);
 
-    animate() {
-        if (!this.initialized) return;
+        // Render the scene
+        if (this.renderer && this.camera) {
+            this.renderer.render(this.scene, this.camera);
+        }
 
-        requestAnimationFrame(this.animate.bind(this));
-        this.update();
-        this.renderer.render(this.scene, this.camera);
+        // Request next frame
+        requestAnimationFrame(this.update.bind(this));
     }
 
     selectEntity(entity) {

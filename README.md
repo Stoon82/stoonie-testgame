@@ -40,6 +40,26 @@ A unique game where you manage souls and their Stoonie vessels in a dynamic ecos
   - Automatic behavior states (wander, flee, fight)
   - Soul power integration
   - Group dynamics
+  - Environment object interaction
+  - Hover stats for all interactive elements
+
+- **Environment System**
+  - Trees for resource gathering
+  - Buildings for shelter
+  - Random placement with minimum distance rules
+  - Interactive hover information
+  - Click-to-interact functionality
+
+### UI Features
+- Real-time stats display when hovering over:
+  - Stoonies (health, energy, needs, soul status)
+  - Trees (location, resource availability)
+  - Buildings (location, shelter status)
+- Debug mode (Shift key):
+  - Entity statistics
+  - FPS counter
+  - Mouse position tracking
+  - Raycast visualization
 
 ## Getting Started
 
@@ -49,10 +69,15 @@ A unique game where you manage souls and their Stoonie vessels in a dynamic ecos
 4. Open index.html in your browser
 
 ## Controls
-- Left Click: Select Stoonie
-- Right Click: Move camera
-- Scroll: Zoom in/out
-- Space: Pause/Resume game
+- **Mouse Controls**
+  - Left Click: Select entity or interact with environment
+  - Right Click + Drag: Pan camera
+  - Scroll Wheel: Zoom in/out
+  - Hover: View entity/object information
+- **Keyboard Controls**
+  - Shift: Toggle debug mode
+  - ESC: Clear selection
+  - Space: Pause/Resume game
 
 ## Development
 

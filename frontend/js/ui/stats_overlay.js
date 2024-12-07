@@ -1,5 +1,6 @@
 export default class StatsOverlay {
-    constructor(gameEngine) {
+    constructor(parent, gameEngine) {
+        this.parent = parent;
         this.gameEngine = gameEngine;
         this.overlay = null;
         this.hoveredEntity = null;
@@ -24,29 +25,55 @@ export default class StatsOverlay {
             boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)',
             border: '1px solid rgba(255, 255, 255, 0.1)'
         });
-        document.body.appendChild(this.overlay);
-
-        // Add event listeners
-        window.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        this.parent.appendChild(this.overlay);
     }
 
-    handleMouseMove(event) {
-        this.mousePosition.x = event.clientX;
-        this.mousePosition.y = event.clientY;
-        
-        // Get hovered entity
-        const hoveredEntity = this.gameEngine.entityManager.getHoveredStoonie(event);
-        if (hoveredEntity !== this.hoveredEntity) {
-            this.hoveredEntity = hoveredEntity;
-            this.updateOverlay();
+    show(entity) {
+        if (!entity) {
+            this.hide();
+            return;
         }
+
+        this.hoveredEntity = entity;
+        this.updateOverlay();
+        this.overlay.style.display = 'block';
+        this.updatePosition();
+    }
+
+    hide() {
+        this.hoveredEntity = null;
+        this.overlay.style.display = 'none';
+    }
+
+    update(deltaTime) {
+        if (this.hoveredEntity && this.overlay.style.display !== 'none') {
+            this.updateOverlay();
+            this.updatePosition();
+        }
+    }
+
+    updatePosition() {
+        if (!this.hoveredEntity || !this.mousePosition) return;
+
+        const padding = 20;
+        const rect = this.overlay.getBoundingClientRect();
+        let x = this.mousePosition.x + padding;
+        let y = this.mousePosition.y + padding;
+
+        // Keep overlay within window bounds
+        if (x + rect.width > window.innerWidth) {
+            x = this.mousePosition.x - rect.width - padding;
+        }
+        if (y + rect.height > window.innerHeight) {
+            y = this.mousePosition.y - rect.height - padding;
+        }
+
+        this.overlay.style.left = `${x}px`;
+        this.overlay.style.top = `${y}px`;
     }
 
     updateOverlay() {
-        if (!this.hoveredEntity) {
-            this.overlay.style.display = 'none';
-            return;
-        }
+        if (!this.hoveredEntity) return;
 
         const entity = this.hoveredEntity;
         let content = '';
@@ -54,7 +81,7 @@ export default class StatsOverlay {
         if (entity.constructor.name === 'Stoonie') {
             const genderSymbol = entity.gender === 'male' ? '♂' : '♀';
             const genderColor = entity.gender === 'male' ? '#ff6b6b' : '#4ecdc4';
-            const needs = this.gameEngine.needsManager.getStatus(entity.id);
+            const needs = entity.needs || {};
             
             content = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -76,110 +103,68 @@ export default class StatsOverlay {
                             <span style="position: absolute; right: -30px; font-size: 12px;">${Math.floor(entity.energy)}%</span>
                         </div>
                     </div>
+                </div>`;
+
+            if (Object.keys(needs).length > 0) {
+                content += `
+                <div style="margin-top: 8px;">
+                    <div style="margin-bottom: 5px; color: #a8a8a8;">Needs:</div>
+                    ${Object.entries(needs).map(([need, value]) => `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                            <span style="color: #a8e6cf;">${need}:</span>
+                            <div style="width: 100px; background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; margin-left: 10px; position: relative;">
+                                <div style="width: ${value}%; background: #a8e6cf; height: 100%; border-radius: 4px;"></div>
+                                <span style="position: absolute; right: -30px; font-size: 12px;">${Math.floor(value)}%</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+
+            if (entity.soul) {
+                content += `
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="color: #a29bfe;">
+                        Soul: ${entity.soul.name} (Level ${entity.soul.level})
+                    </div>
+                </div>`;
+            }
+        } else if (entity.constructor.name === 'Tree') {
+            const pos = entity.mesh.position;
+            content = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #2ecc71;">🌲 Tree</span>
                 </div>
-                ${needs ? `
-                    <div style="margin-bottom: 10px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.1);">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                            <span style="color: #ffeaa7;">Hunger:</span>
-                            <div style="width: 100px; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; margin-left: 10px; position: relative;">
-                                <div style="width: ${needs.hunger}%; background: #ffeaa7; height: 100%; border-radius: 3px;"></div>
-                                <span style="position: absolute; right: -30px; font-size: 12px;">${Math.floor(needs.hunger)}%</span>
-                            </div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                            <span style="color: #81ecec;">Thirst:</span>
-                            <div style="width: 100px; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; margin-left: 10px; position: relative;">
-                                <div style="width: ${needs.thirst}%; background: #81ecec; height: 100%; border-radius: 3px;"></div>
-                                <span style="position: absolute; right: -30px; font-size: 12px;">${Math.floor(needs.thirst)}%</span>
-                            </div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                            <span style="color: #a8e6cf;">Rest:</span>
-                            <div style="width: 100px; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; margin-left: 10px; position: relative;">
-                                <div style="width: ${100 - needs.tiredness}%; background: #a8e6cf; height: 100%; border-radius: 3px;"></div>
-                                <span style="position: absolute; right: -30px; font-size: 12px;">${Math.floor(100 - needs.tiredness)}%</span>
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-                <div style="margin-bottom: 10px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                        <span>Age:</span>
-                        <span>${Math.floor(entity.age)} sec</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                        <span>State:</span>
-                        <span style="color: ${
-                            entity.behaviorState === 'wander' ? '#a8e6cf' :
-                            entity.behaviorState === 'flee' ? '#ff7675' :
-                            entity.behaviorState === 'fight' ? '#ffd93d' :
-                            entity.behaviorState === 'working' ? '#74b9ff' : '#ffffff'
-                        };">${entity.behaviorState}</span>
-                    </div>
-                    ${entity.shield > 0 ? `
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                            <span style="color: #a8e6cf;">Shield:</span>
-                            <span>${Math.floor(entity.shield)}</span>
-                        </div>
-                    ` : ''}
+                <div style="margin-bottom: 5px;">
+                    <div style="color: #a8a8a8;">Position</div>
+                    <div>X: ${pos.x.toFixed(1)}</div>
+                    <div>Z: ${pos.z.toFixed(1)}</div>
                 </div>
-                ${entity.soul ? `
-                    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 5px;">
-                        <div style="color: #a8e6cf; margin-bottom: 3px;">Soul: ${entity.soul.name}</div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                            <span>Level ${entity.soul.level}</span>
-                            <div style="width: 100px; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; margin-left: 10px; position: relative;">
-                                <div style="width: ${(entity.soul.experience % 100)}%; background: #ffd93d; height: 100%; border-radius: 3px;"></div>
-                                <span style="position: absolute; right: -45px; font-size: 12px;">XP: ${Math.floor(entity.soul.experience)}</span>
-                            </div>
-                        </div>
-                        ${entity.soul.powers.size > 0 ? `
-                            <div style="font-size: 12px; color: #dfe6e9; margin-top: 3px;">
-                                Powers: ${Array.from(entity.soul.powers).join(', ')}
-                            </div>
-                        ` : ''}
+                <div style="margin-top: 8px; color: #a8e6cf;">
+                    <div>Resources available</div>
+                    <div style="font-size: 12px; color: #95a5a6; margin-top: 4px;">
+                        Click to gather
                     </div>
-                ` : ''}
-                ${entity.isPregnant ? `
-                    <div style="margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.1);">
-                        <div style="color: #ffd3b6; display: flex; justify-content: space-between; align-items: center;">
-                            <span>🤰 Pregnant</span>
-                            <span style="font-size: 12px;">${Math.floor(entity.pregnancyTime)}/${entity.pregnancyDuration} sec</span>
-                        </div>
-                        <div style="width: 100%; background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; margin-top: 3px;">
-                            <div style="width: ${(entity.pregnancyTime / entity.pregnancyDuration) * 100}%; background: #ffd3b6; height: 100%; border-radius: 2px;"></div>
-                        </div>
+                </div>`;
+        } else if (entity.constructor.name === 'Building') {
+            const pos = entity.mesh.position;
+            content = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #e67e22;">🏠 Building</span>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <div style="color: #a8a8a8;">Position</div>
+                    <div>X: ${pos.x.toFixed(1)}</div>
+                    <div>Z: ${pos.z.toFixed(1)}</div>
+                </div>
+                <div style="margin-top: 8px; color: #f39c12;">
+                    <div>Shelter</div>
+                    <div style="font-size: 12px; color: #95a5a6; margin-top: 4px;">
+                        Click to enter
                     </div>
-                ` : ''}
-            `;
+                </div>`;
         }
 
         this.overlay.innerHTML = content;
-        this.overlay.style.display = 'block';
-
-        // Position the overlay near the mouse but ensure it stays within viewport
-        const rect = this.overlay.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        let left = this.mousePosition.x + 15;
-        let top = this.mousePosition.y + 15;
-
-        // Adjust position if overlay would go outside viewport
-        if (left + rect.width > viewportWidth) {
-            left = this.mousePosition.x - rect.width - 15;
-        }
-        if (top + rect.height > viewportHeight) {
-            top = this.mousePosition.y - rect.height - 15;
-        }
-
-        this.overlay.style.left = `${left}px`;
-        this.overlay.style.top = `${top}px`;
-    }
-
-    update() {
-        if (this.hoveredEntity) {
-            this.updateOverlay();
-        }
     }
 }

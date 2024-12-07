@@ -34,6 +34,10 @@ export default class BaseEntity {
         }
     }
 
+    getMesh() {
+        return this.mesh;
+    }
+
     update(deltaTime) {
         // Update physics
         this.velocity.add(this.acceleration);
@@ -50,12 +54,9 @@ export default class BaseEntity {
         
         // Apply friction
         this.velocity.multiplyScalar(0.95);
-        
-        // Reset acceleration
-        this.acceleration.set(0, 0, 0);
-        
-        // Update properties
-        this.energy = Math.max(0, this.energy - deltaTime * 0.1);
+        this.acceleration.multiplyScalar(0);
+
+        // Update basic properties
         this.age += deltaTime;
     }
 
@@ -81,10 +82,6 @@ export default class BaseEntity {
         if (this.mesh) {
             this.mesh.position.copy(this._position);
         }
-    }
-
-    getMesh() {
-        return this.mesh;
     }
 
     isDead() {

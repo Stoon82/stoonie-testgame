@@ -6,185 +6,302 @@ import StatsOverlay from '../ui/stats_overlay.js';
 export default class UIManager {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
-        this.canvas = null;
-        this.draggedSoul = null;
-        this.mousePosition = { x: 0, y: 0 };
-        this.panels = {};
         this.initialized = false;
+        this.canvas = null;
         this.overlay = null;
         this.detailsPanel = null;
         this.statsOverlay = null;
+        this.hoveredEntity = null;
+        this.panels = {};
+        this.draggedSoul = null;
+        this.mousePosition = { x: 0, y: 0 };
     }
 
     initialize() {
         if (this.initialized) return;
         console.log('Initializing UIManager');
 
-        if (!this.gameEngine.renderer) {
-            throw new Error('Renderer must be initialized before UIManager');
-        }
-        
-        this.canvas = this.gameEngine.renderer.domElement;
-        this.overlay = new UIOverlay(this.gameEngine);
-        this.detailsPanel = new DetailsPanel(this.gameEngine);
-        this.statsOverlay = new StatsOverlay(this.gameEngine);
+        // Create canvas for WebGL rendering
+        this.canvas = document.createElement('canvas');
+        this.canvas.style.position = 'absolute';
+        this.canvas.style.top = '0';
+        this.canvas.style.left = '0';
+        this.canvas.style.width = '100%';
+        this.canvas.style.height = '100%';
+        document.body.appendChild(this.canvas);
+
+        // Create UI overlay container
+        this.overlay = document.createElement('div');
+        this.overlay.id = 'ui-overlay';
+        this.overlay.style.position = 'absolute';
+        this.overlay.style.top = '0';
+        this.overlay.style.left = '0';
+        this.overlay.style.width = '100%';
+        this.overlay.style.height = '100%';
+        document.body.appendChild(this.overlay);
+
+        // Initialize UI panels
         this.initializePanels();
+
+        // Initialize stats overlay
+        this.statsOverlay = new StatsOverlay(this.overlay, this.gameEngine);
+
+        // Initialize details panel
+        this.detailsPanel = new DetailsPanel(this.overlay);
+
+        // Handle window resize
+        window.addEventListener('resize', this.resizeCanvas.bind(this));
+        this.resizeCanvas();
+
+        // Set up UI-specific event listeners
         this.setupEventListeners();
-        
+
         this.initialized = true;
     }
 
     initializePanels() {
         // Initialize selection panel
-        this.panels.selection = document.getElementById('selection-panel');
-        if (!this.panels.selection) {
-            this.panels.selection = document.createElement('div');
-            this.panels.selection.id = 'selection-panel';
-            document.body.appendChild(this.panels.selection);
-        }
-        this.panels.selection.style.position = 'absolute';
-        this.panels.selection.style.left = '10px';
-        this.panels.selection.style.top = '10px';
-        this.panels.selection.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        this.panels.selection.style.padding = '10px';
-        this.panels.selection.style.borderRadius = '5px';
-        this.panels.selection.style.color = 'white';
-        this.panels.selection.style.display = 'none';
-
-        // Initialize stats panel
-        this.panels.stats = document.getElementById('stats-panel');
-        if (!this.panels.stats) {
-            this.panels.stats = document.createElement('div');
-            this.panels.stats.id = 'stats-panel';
-            document.body.appendChild(this.panels.stats);
-        }
-        this.panels.stats.style.position = 'absolute';
-        this.panels.stats.style.right = '10px';
-        this.panels.stats.style.top = '10px';
-        this.panels.stats.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        this.panels.stats.style.padding = '10px';
-        this.panels.stats.style.borderRadius = '5px';
-        this.panels.stats.style.color = 'white';
+        this.panels.selection = document.createElement('div');
+        this.panels.selection.id = 'selection-panel';
+        Object.assign(this.panels.selection.style, {
+            position: 'absolute',
+            left: '10px',
+            top: '10px',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            padding: '10px',
+            borderRadius: '5px',
+            color: 'white',
+            display: 'none',
+            pointerEvents: 'auto',
+            zIndex: '100'
+        });
+        this.overlay.appendChild(this.panels.selection);
 
         // Initialize souls panel
-        this.panels.souls = document.getElementById('souls-panel');
-        if (!this.panels.souls) {
-            this.panels.souls = document.createElement('div');
-            this.panels.souls.id = 'souls-panel';
-            document.body.appendChild(this.panels.souls);
-        }
-        this.panels.souls.style.position = 'absolute';
-        this.panels.souls.style.left = '10px';
-        this.panels.souls.style.bottom = '10px';
-        this.panels.souls.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        this.panels.souls.style.padding = '10px';
-        this.panels.souls.style.borderRadius = '5px';
-        this.panels.souls.style.color = 'white';
-
-        // Initialize the details panel
-        this.detailsPanel.initialize();
-    }
-
-    setupEventListeners() {
-        this.canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
-        this.canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
-        this.canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
-    }
-
-    onMouseDown(event) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        // Check if we're clicking on a soul in the souls panel
-        if (event.target.classList.contains('soul-item')) {
-            this.draggedSoul = this.gameEngine.soulManager.souls.get(event.target.dataset.soulId);
-            if (this.draggedSoul) {
-                this.mousePosition = { x, y };
-                event.target.style.opacity = '0.5';
-            }
-        }
-    }
-
-    onMouseMove(event) {
-        const rect = this.canvas.getBoundingClientRect();
-        this.mousePosition.x = event.clientX - rect.left;
-        this.mousePosition.y = event.clientY - rect.top;
-
-        if (this.draggedSoul) {
-            // Update visual feedback for dragging
-            const dragVisual = document.getElementById('drag-visual');
-            if (dragVisual) {
-                dragVisual.style.left = `${event.clientX}px`;
-                dragVisual.style.top = `${event.clientY}px`;
-            }
-        }
-    }
-
-    onMouseUp(event) {
-        if (!this.draggedSoul) return;
-
-        const rect = this.canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-
-        // Convert screen coordinates to world coordinates
-        const worldPosition = this.screenToWorld(x, y);
-        
-        // Find the closest stoonie to the drop position
-        const closestStoonie = this.findClosestStoonie(worldPosition);
-        
-        if (closestStoonie && this.isInRange(closestStoonie.position, worldPosition, 2)) {
-            // Attempt to connect the soul to the stoonie
-            this.gameEngine.soulManager.connectSoulToStoonie(this.draggedSoul, closestStoonie);
-        }
-
-        // Reset drag state
-        const draggedElement = document.querySelector('.soul-item[data-soul-id="' + this.draggedSoul.id + '"]');
-        if (draggedElement) {
-            draggedElement.style.opacity = '1';
-        }
-        
-        this.draggedSoul = null;
+        this.panels.souls = document.createElement('div');
+        this.panels.souls.id = 'souls-panel';
+        Object.assign(this.panels.souls.style, {
+            position: 'absolute',
+            left: '10px',
+            bottom: '10px',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            padding: '10px',
+            borderRadius: '5px',
+            color: 'white',
+            pointerEvents: 'auto',
+            zIndex: '100'
+        });
+        this.overlay.appendChild(this.panels.souls);
         this.updateSoulsPanel();
     }
 
-    screenToWorld(screenX, screenY) {
-        const vector = new THREE.Vector3(
-            (screenX / this.canvas.width) * 2 - 1,
-            -(screenY / this.canvas.height) * 2 + 1,
-            0.5
-        );
-        vector.unproject(this.gameEngine.camera);
-        return vector;
-    }
-
-    findClosestStoonie(position) {
-        let closestStoonie = null;
-        let closestDistance = Infinity;
-
-        this.gameEngine.entityManager.entities.forEach(entity => {
-            if (entity.constructor.name === 'Stoonie' && !entity.soul) {
-                const distance = position.distanceTo(entity.position);
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestStoonie = entity;
+    setupEventListeners() {
+        // Soul dragging events
+        this.panels.souls.addEventListener('mousedown', (event) => {
+            const soulItem = event.target.closest('.soul-item');
+            if (soulItem) {
+                const soulId = soulItem.dataset.soulId;
+                this.draggedSoul = this.gameEngine.soulManager.souls.get(soulId);
+                if (this.draggedSoul) {
+                    soulItem.style.opacity = '0.5';
+                    this.createDragVisual(event);
                 }
             }
         });
 
-        return closestStoonie;
+        document.addEventListener('mousemove', (event) => {
+            // Update mouse position for UI interactions
+            this.mousePosition = { x: event.clientX, y: event.clientY };
+            
+            // Update drag visual if dragging a soul
+            if (this.draggedSoul) {
+                const dragVisual = document.getElementById('drag-visual');
+                if (dragVisual) {
+                    dragVisual.style.left = `${event.clientX}px`;
+                    dragVisual.style.top = `${event.clientY}px`;
+                }
+                
+                // Check for Stoonie under mouse
+                const mouse = new THREE.Vector2(
+                    (event.clientX / window.innerWidth) * 2 - 1,
+                    -(event.clientY / window.innerHeight) * 2 + 1
+                );
+
+                this.gameEngine.raycaster.setFromCamera(mouse, this.gameEngine.camera);
+                const intersects = this.gameEngine.raycaster.intersectObjects(this.gameEngine.scene.children, true);
+
+                let foundStoonie = false;
+                for (const intersect of intersects) {
+                    const entity = this.gameEngine.entityManager.getEntityByMesh(intersect.object);
+                    if (entity && entity.constructor.name === 'Stoonie') {
+                        entity.mesh.material.emissive.setHex(0x444444);
+                        foundStoonie = true;
+                        break;
+                    }
+                }
+
+                if (!foundStoonie) {
+                    // Reset all Stoonie materials
+                    this.gameEngine.entityManager.getEntities().forEach(entity => {
+                        if (entity.constructor.name === 'Stoonie') {
+                            entity.mesh.material.emissive.setHex(0x000000);
+                        }
+                    });
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', (event) => {
+            if (this.draggedSoul) {
+                // Remove drag visual
+                const dragVisual = document.getElementById('drag-visual');
+                if (dragVisual) {
+                    dragVisual.remove();
+                }
+
+                // Reset soul item opacity
+                const soulItem = document.querySelector(`.soul-item[data-soul-id="${this.draggedSoul.id}"]`);
+                if (soulItem) {
+                    soulItem.style.opacity = '1';
+                }
+
+                // Check if we're over a Stoonie
+                const mouse = new THREE.Vector2(
+                    (event.clientX / window.innerWidth) * 2 - 1,
+                    -(event.clientY / window.innerHeight) * 2 + 1
+                );
+
+                this.gameEngine.raycaster.setFromCamera(mouse, this.gameEngine.camera);
+                const intersects = this.gameEngine.raycaster.intersectObjects(this.gameEngine.scene.children, true);
+
+                for (const intersect of intersects) {
+                    const entity = this.gameEngine.entityManager.getEntityByMesh(intersect.object);
+                    if (entity && entity.constructor.name === 'Stoonie') {
+                        this.gameEngine.soulManager.connectSoulToStoonie(this.draggedSoul, entity);
+                        break;
+                    }
+                }
+
+                // Reset all Stoonie materials
+                this.gameEngine.entityManager.getEntities().forEach(entity => {
+                    if (entity.constructor.name === 'Stoonie') {
+                        entity.mesh.material.emissive.setHex(0x000000);
+                    }
+                });
+
+                this.draggedSoul = null;
+                this.updateSoulsPanel();
+            }
+        });
     }
 
-    isInRange(position1, position2, maxDistance) {
-        return position1.distanceTo(position2) <= maxDistance;
+    updateHoveredEntity(event) {
+        if (this.draggedSoul) return; // Don't update hover while dragging
+
+        const mouse = new THREE.Vector2(
+            (event.clientX / window.innerWidth) * 2 - 1,
+            -(event.clientY / window.innerHeight) * 2 + 1
+        );
+
+        this.gameEngine.raycaster.setFromCamera(mouse, this.gameEngine.camera);
+        const intersects = this.gameEngine.raycaster.intersectObjects(this.gameEngine.scene.children, true);
+
+        let hoveredEntity = null;
+        for (const intersect of intersects) {
+            const entity = this.gameEngine.entityManager.getEntityByMesh(intersect.object);
+            if (entity) {
+                hoveredEntity = entity;
+                break;
+            }
+        }
+
+        this.setHoveredEntity(hoveredEntity);
+    }
+
+    onSoulDragStart(event) {
+        if (event.target.closest('.soul-item')) {
+            const soulId = event.target.closest('.soul-item').dataset.soulId;
+            this.draggedSoul = this.gameEngine.soulManager.souls.get(soulId);
+            if (this.draggedSoul) {
+                event.target.closest('.soul-item').style.opacity = '0.5';
+                this.createDragVisual(event);
+            }
+        }
+    }
+
+    onSoulDragMove(event) {
+        if (this.draggedSoul) {
+            const dragVisual = document.getElementById('drag-visual');
+            if (dragVisual) {
+                dragVisual.style.left = `${event.clientX - 20}px`;
+                dragVisual.style.top = `${event.clientY - 20}px`;
+            }
+        }
+    }
+
+    onSoulDragEnd(event) {
+        if (!this.draggedSoul) return;
+
+        const dragVisual = document.getElementById('drag-visual');
+        if (dragVisual) {
+            dragVisual.remove();
+        }
+
+        // Convert screen coordinates to world coordinates
+        const mouse = new THREE.Vector2(
+            (event.clientX / window.innerWidth) * 2 - 1,
+            -(event.clientY / window.innerHeight) * 2 + 1
+        );
+
+        this.gameEngine.raycaster.setFromCamera(mouse, this.gameEngine.camera);
+        const intersects = this.gameEngine.raycaster.intersectObjects(this.gameEngine.scene.children, true);
+
+        let targetStoonie = null;
+        for (const intersect of intersects) {
+            const entity = this.gameEngine.entityManager.getEntityByMesh(intersect.object);
+            if (entity && entity.constructor.name === 'Stoonie' && !entity.soul) {
+                targetStoonie = entity;
+                break;
+            }
+        }
+
+        if (targetStoonie) {
+            this.gameEngine.soulManager.connectSoulToStoonie(this.draggedSoul, targetStoonie);
+        }
+
+        // Reset drag state
+        const draggedElement = document.querySelector(`.soul-item[data-soul-id="${this.draggedSoul.id}"]`);
+        if (draggedElement) {
+            draggedElement.style.opacity = '1';
+        }
+
+        this.draggedSoul = null;
+        this.updateSoulsPanel();
+    }
+
+    createDragVisual(event) {
+        const dragVisual = document.createElement('div');
+        dragVisual.id = 'drag-visual';
+        dragVisual.style.position = 'fixed';
+        dragVisual.style.pointerEvents = 'none';
+        dragVisual.style.zIndex = '1000';
+        dragVisual.style.width = '32px';
+        dragVisual.style.height = '32px';
+        dragVisual.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+        dragVisual.style.borderRadius = '50%';
+        dragVisual.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.3)';
+        dragVisual.style.left = `${event.clientX}px`;
+        dragVisual.style.top = `${event.clientY}px`;
+        dragVisual.style.transform = 'translate(-50%, -50%)';
+        document.body.appendChild(dragVisual);
     }
 
     updateSoulsPanel() {
         if (!this.panels.souls) return;
 
-        const availableSouls = Array.from(this.gameEngine.soulManager.availableSouls);
-        
+        const availableSouls = Array.from(this.gameEngine.soulManager.souls.values())
+            .filter(soul => !soul.connectedStoonie);
+
         this.panels.souls.innerHTML = '<h3>Available Souls</h3>';
         if (availableSouls.length === 0) {
             this.panels.souls.innerHTML += '<p>No souls available</p>';
@@ -193,7 +310,8 @@ export default class UIManager {
 
         const soulsList = document.createElement('div');
         soulsList.className = 'souls-list';
-        
+        soulsList.style.marginTop = '10px';
+
         availableSouls.forEach(soul => {
             const soulItem = document.createElement('div');
             soulItem.className = 'soul-item';
@@ -202,11 +320,16 @@ export default class UIManager {
                 <span class="soul-name">${soul.name}</span>
                 <span class="soul-level">Level ${soul.level}</span>
             `;
-            soulItem.style.cursor = 'grab';
-            soulItem.style.padding = '5px';
-            soulItem.style.margin = '5px';
-            soulItem.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-            soulItem.style.borderRadius = '3px';
+            Object.assign(soulItem.style, {
+                cursor: 'grab',
+                padding: '5px',
+                margin: '5px',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '3px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+            });
             
             soulsList.appendChild(soulItem);
         });
@@ -214,36 +337,78 @@ export default class UIManager {
         this.panels.souls.appendChild(soulsList);
     }
 
-    update() {
+    update(deltaTime) {
         if (!this.initialized) return;
         
-        this.updateSoulsPanel();
-        this.detailsPanel.update();
-        this.statsOverlay.update();
+        if (this.statsOverlay) {
+            this.statsOverlay.update(deltaTime);
+        }
         
-        // Update selection panel if needed
-        if (this.gameEngine.selectedEntity) {
-            this.updateSelectionPanel(this.gameEngine.selectedEntity);
+        if (this.detailsPanel) {
+            this.detailsPanel.update(deltaTime);
+        }
+
+        // Update souls panel
+        this.updateSoulsPanel();
+
+        // Update selection panel
+        const selectedEntities = this.gameEngine.selectionManager.getSelectedEntities();
+        if (selectedEntities.length > 0) {
+            this.updateSelectionPanel(selectedEntities);
+            this.panels.selection.style.display = 'block';
+        } else {
+            this.panels.selection.style.display = 'none';
         }
     }
 
-    updateSelectionPanel(entity) {
+    updateSelectionPanel(selectedEntities) {
         if (!this.panels.selection) return;
 
-        if (entity.constructor.name === 'Stoonie') {
-            this.panels.selection.style.display = 'block';
-            this.panels.selection.innerHTML = `
-                <h3>Selected Stoonie</h3>
-                <p>Age: ${Math.floor(entity.age)}</p>
-                <p>Health: ${Math.floor(entity.health)}</p>
-                ${entity.soul ? `
-                    <p>Soul: ${entity.soul.name}</p>
-                    <p>Soul Level: ${entity.soul.level}</p>
-                    <p>Experience: ${Math.floor(entity.soul.experience)}</p>
-                ` : '<p>No soul attached</p>'}
-            `;
-        } else {
-            this.panels.selection.style.display = 'none';
+        let content = '<h3>Selected Stoonies</h3>';
+        selectedEntities.forEach(entity => {
+            if (entity.constructor.name === 'Stoonie') {
+                content += `
+                    <div style="margin-top: 10px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div>Stoonie #${entity.id}</div>
+                        <div>Health: ${Math.floor(entity.health)}%</div>
+                        <div>Energy: ${Math.floor(entity.energy)}%</div>
+                        ${entity.soul ? `
+                            <div>Soul: ${entity.soul.name} (Level ${entity.soul.level})</div>
+                        ` : '<div>No soul attached</div>'}
+                    </div>
+                `;
+            }
+        });
+
+        this.panels.selection.innerHTML = content;
+    }
+
+    setHoveredEntity(entity) {
+        if (entity !== this.hoveredEntity) {
+            this.hoveredEntity = entity;
+            if (this.statsOverlay) {
+                if (entity) {
+                    this.statsOverlay.show(entity);
+                    this.statsOverlay.mousePosition = this.mousePosition;
+                } else {
+                    this.statsOverlay.hide();
+                }
+            }
+        }
+    }
+
+    clearHoveredEntity() {
+        this.setHoveredEntity(null);
+    }
+
+    getCanvas() {
+        return this.canvas;
+    }
+
+    resizeCanvas() {
+        if (this.canvas) {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
         }
     }
 }

@@ -120,7 +120,7 @@ export default class Stoonie extends BaseEntity {
 
     updateNearbyDemons() {
         this.nearbyDemons = [];
-        const entities = Array.from(this.gameEngine.entityManager.entities.values());
+        const entities = this.gameEngine.entityManager.getEntities();
         
         for (const entity of entities) {
             if (entity.constructor.name === 'DemonStoonie') {
@@ -250,6 +250,7 @@ export default class Stoonie extends BaseEntity {
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.castShadow = true;
         this.mesh.position.copy(this.position);
+        this.mesh.entity = this; // Store reference to entity
 
         // Add pregnancy indicator if female
         if (this.gender === 'female') {

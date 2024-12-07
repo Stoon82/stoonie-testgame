@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 
 export default class Tree {
-    constructor(id, config = {}) {
-        this.id = id;
-        this.position = config.position || new THREE.Vector3(0, 0, 0);
+    constructor({ x = 0, z = 0 }) {
+        this.position = new THREE.Vector3(x, 0, z);
         this.createModel();
     }
 
     createModel() {
         // Create a group to hold the tree parts
         this.mesh = new THREE.Group();
+        this.mesh.entity = this; // Store reference to entity
         
         // Create trunk
         const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 2, 8);

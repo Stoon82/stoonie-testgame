@@ -6,7 +6,13 @@ export default class InitManager {
             'worldManager',
             'entityManager',
             'soulManager',
-            'uiManager'
+            'uiManager',
+            'debugManager',
+            'uiOverlay',
+            'needsManager',
+            'vicinityManager',
+            'selectionManager',
+            'inputManager'
         ];
         this.initialized = false;
     }

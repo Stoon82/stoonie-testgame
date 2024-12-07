@@ -49,15 +49,11 @@ export class EntityManager {
     }
 
     createStoonie(config = {}) {
-        const stoonie = new Stoonie(this.nextEntityId++, config, this.gameEngine);
-        this.addEntity(stoonie);
-        return stoonie;
+        return this.spawnEntity('Stoonie', config);
     }
 
     createDemonStoonie(config = {}) {
-        const demon = new DemonStoonie(this.nextEntityId++, config, this.gameEngine);
-        this.addEntity(demon);
-        return demon;
+        return this.spawnEntity('DemonStoonie', config);
     }
 
     removeEntity(entity) {
@@ -69,6 +65,34 @@ export class EntityManager {
 
     getEntityById(id) {
         return this.entities.get(id);
+    }
+
+    getEntityByMesh(mesh) {
+        if (!mesh) return null;
+        
+        // If the mesh is the entity's main mesh
+        for (const entity of this.entities.values()) {
+            if (entity.getMesh() === mesh) {
+                return entity;
+            }
+        }
+
+        // If the mesh is a child of the entity's mesh
+        let currentMesh = mesh;
+        while (currentMesh && currentMesh.parent) {
+            for (const entity of this.entities.values()) {
+                if (entity.getMesh() === currentMesh) {
+                    return entity;
+                }
+            }
+            currentMesh = currentMesh.parent;
+        }
+
+        return null;
+    }
+
+    getEntities() {
+        return Array.from(this.entities.values());
     }
 
     update(deltaTime) {

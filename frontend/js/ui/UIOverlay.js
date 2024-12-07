@@ -3,17 +3,22 @@ import * as THREE from 'three';
 export default class UIOverlay {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
-        this.setupUI();
-        this.setupSoulPanel();
-        this.selectedSoul = null;
-        this.draggingSoul = false;
-    }
-
-    setupUI() {
         this.container = null;
         this.soulPanel = null;
         this.draggedSoul = null;
         this.hoveredStoonie = null;
+        this.selectedSoul = null;
+        this.draggingSoul = false;
+    }
+
+    async initialize() {
+        console.log('Initializing UIOverlay');
+        this.setupUI();
+        this.setupSoulPanel();
+        return Promise.resolve();
+    }
+
+    setupUI() {
         this.init();
     }
 

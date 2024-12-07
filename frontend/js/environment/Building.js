@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 
 export default class Building {
-    constructor(id, config = {}) {
-        this.id = id;
-        this.position = config.position || new THREE.Vector3(0, 0, 0);
+    constructor({ x = 0, z = 0 }) {
+        this.position = new THREE.Vector3(x, 0, z);
         this.createModel();
     }
 
     createModel() {
         // Create a group to hold building parts
         this.mesh = new THREE.Group();
+        this.mesh.entity = this; // Store reference to entity
         
         // Random building dimensions
         const width = 2 + Math.random() * 2;

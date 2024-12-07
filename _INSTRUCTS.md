@@ -71,6 +71,19 @@
   - Connection management with Stoonies
   - Power application and removal
 
+### Environment Objects (`frontend/js/environment/`)
+- **Tree.js**
+  - Resource gathering points
+  - Random placement in world
+  - Interactive hover stats
+  - Click to gather resources
+
+- **Building.js**
+  - Shelter structures
+  - Random placement with collision detection
+  - Interactive hover stats
+  - Click to enter functionality
+
 ## Game Rules
 
 ### Stoonie Rules
@@ -153,6 +166,14 @@
    - Direction indicators
    - Velocity vectors
    - Interaction radius
+
+## UI Components (`frontend/js/ui/`)
+- **StatsOverlay.js**
+  - Real-time entity information display
+  - Shows details for Stoonies, Trees, and Buildings
+  - Position tracking for hover placement
+  - Context-aware information display
+  - Custom styling for each entity type
 
 ## Code Standards and Patterns
 
@@ -270,6 +291,23 @@ class ClassName {
   - Shield Bubble: Damage reduction
   - Speed Boost: 50% faster fleeing
 
+### Environment Object Interaction (2024-12-07)
+- Added hover stats for Trees and Buildings
+- Implemented random placement system for environment objects
+- Enhanced raycasting to detect all interactive objects
+- Added visual feedback for interactive elements
+- Improved debug mode cleanup and performance
+- Reduced console logging for better performance
+
+### UI Enhancements
+- Stats overlay now shows:
+  - Tree locations and resource availability
+  - Building locations and shelter status
+  - Stoonie detailed stats (health, energy, needs)
+- Added clear visual hierarchy in overlays
+- Improved hover detection accuracy
+- Added intuitive interaction hints
+
 ## Known Issues
 - Soul disconnection may cause temporary console errors (handled gracefully)
 - Entities might occasionally spawn at the same location
@@ -281,6 +319,21 @@ class ClassName {
 4. Create a proper UI for entity stats
 
 ## Changelog
+
+### Version 0.1.5 (2024-12-07)
+- Enhanced stats overlay with detailed information
+  - Added percentage labels to health and energy bars
+  - Added needs section (hunger, thirst, rest)
+  - Added age and behavior state display with color coding
+  - Added shield indicator when active
+  - Improved soul section with XP progress bar and powers list
+  - Enhanced pregnancy display with time remaining
+  - Improved overall spacing and organization
+  - Added color coding for different types of information
+- Moved UI components to dedicated ui/ directory
+  - Relocated UIOverlay.js from core/ to ui/
+  - Created new stats_overlay.js and details_panel.js
+- Improved code organization and maintainability
 
 ### Version 0.1.4 (2024-12-07)
 - Added comprehensive soul management UI

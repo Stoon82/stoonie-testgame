@@ -1,6 +1,14 @@
 export default class NeedsManager {
-    constructor() {
+    constructor(gameEngine) {
+        this.gameEngine = gameEngine;
         this.entities = new Map(); // Map of entity ID to needs data
+        this.initialized = false;
+    }
+
+    initialize() {
+        if (this.initialized) return;
+        console.log('Initializing NeedsManager');
+        this.initialized = true;
     }
 
     initializeNeeds(entityId) {
@@ -15,7 +23,18 @@ export default class NeedsManager {
         });
     }
 
-    update(entityId, deltaTime) {
+    update(deltaTime) {
+        if (!this.initialized) return;
+
+        // Update needs for all entities
+        for (const entity of this.gameEngine.entityManager.getEntities()) {
+            if (entity.constructor.name === 'Stoonie') {
+                this.updateEntityNeeds(entity.id, deltaTime);
+            }
+        }
+    }
+
+    updateEntityNeeds(entityId, deltaTime) {
         const needs = this.entities.get(entityId);
         if (!needs) return;
 
@@ -27,6 +46,11 @@ export default class NeedsManager {
         // Update pregnancy progress if pregnant
         if (needs.isPregnant) {
             needs.pregnancyProgress = Math.min(100, needs.pregnancyProgress + 0.2 * deltaTime);
+            
+            // Check if ready to give birth
+            if (needs.pregnancyProgress >= 100) {
+                this.giveBirth(entityId);
+            }
         }
 
         // Health effects based on needs
@@ -34,14 +58,46 @@ export default class NeedsManager {
             needs.health = Math.max(0, needs.health - 0.1 * deltaTime);
         }
 
-        return this.getStatus(entityId);
+        // Update entity stats
+        const entity = this.gameEngine.entityManager.getEntityById(entityId);
+        if (entity) {
+            entity.health = needs.health;
+            entity.needs = {
+                hunger: needs.hunger,
+                thirst: needs.thirst,
+                rest: 100 - needs.tiredness
+            };
+            entity.isPregnant = needs.isPregnant;
+            entity.pregnancyTime = needs.isPregnant ? (100 - needs.pregnancyProgress) : 0;
+        }
     }
 
     startPregnancy(entityId) {
         const needs = this.entities.get(entityId);
-        if (needs) {
+        if (needs && !needs.isPregnant) {
+            console.log(`Stoonie #${entityId} is now pregnant!`);
             needs.isPregnant = true;
             needs.pregnancyProgress = 0;
+        }
+    }
+
+    giveBirth(entityId) {
+        const entity = this.gameEngine.entityManager.getEntityById(entityId);
+        if (entity) {
+            console.log(`Stoonie #${entityId} is giving birth!`);
+            
+            // Create a new Stoonie at a slightly offset position
+            const offset = Math.random() * 0.5;
+            const position = {
+                x: entity.position.x + offset,
+                y: entity.position.y,
+                z: entity.position.z + offset
+            };
+            
+            this.gameEngine.entityManager.createStoonie({ position });
+            
+            // Reset pregnancy status
+            this.endPregnancy(entityId);
         }
     }
 
@@ -53,53 +109,21 @@ export default class NeedsManager {
         }
     }
 
-    addIllness(entityId, illness) {
-        const needs = this.entities.get(entityId);
-        if (needs && !needs.illnesses.includes(illness)) {
-            needs.illnesses.push(illness);
-        }
-    }
-
-    removeIllness(entityId, illness) {
-        const needs = this.entities.get(entityId);
-        if (needs) {
-            needs.illnesses = needs.illnesses.filter(i => i !== illness);
-        }
-    }
-
-    heal(entityId, amount) {
-        const needs = this.entities.get(entityId);
-        if (needs) {
-            needs.health = Math.min(100, needs.health + amount);
-        }
-    }
-
-    feed(entityId, amount) {
-        const needs = this.entities.get(entityId);
-        if (needs) {
-            needs.hunger = Math.min(100, needs.hunger + amount);
-        }
-    }
-
-    hydrate(entityId, amount) {
-        const needs = this.entities.get(entityId);
-        if (needs) {
-            needs.thirst = Math.min(100, needs.thirst + amount);
-        }
-    }
-
-    rest(entityId, amount) {
-        const needs = this.entities.get(entityId);
-        if (needs) {
-            needs.tiredness = Math.max(0, needs.tiredness - amount);
-        }
+    getNeeds(entityId) {
+        return this.entities.get(entityId);
     }
 
     getStatus(entityId) {
-        return this.entities.get(entityId) || null;
-    }
+        const needs = this.entities.get(entityId);
+        if (!needs) return null;
 
-    removeEntity(entityId) {
-        this.entities.delete(entityId);
+        return {
+            hunger: needs.hunger,
+            thirst: needs.thirst,
+            tiredness: needs.tiredness,
+            health: needs.health,
+            isPregnant: needs.isPregnant,
+            pregnancyProgress: needs.pregnancyProgress
+        };
     }
 }
