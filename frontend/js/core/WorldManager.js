@@ -99,7 +99,7 @@ export default class WorldManager {
     }
 
     addTree({ x, z }) {
-        const tree = new Tree({ x, z });
+        const tree = new Tree(this.gameEngine, { x, z });
         const id = this.generateObjectId();
         this.environmentObjects.set(id, tree);
         this.scene.add(tree.mesh);
@@ -107,7 +107,7 @@ export default class WorldManager {
     }
 
     addBuilding(position) {
-        const building = new Building(position);
+        const building = new Building(this.gameEngine, position);
         const id = this.generateObjectId();
         this.environmentObjects.set(id, building);
         this.scene.add(building.mesh);

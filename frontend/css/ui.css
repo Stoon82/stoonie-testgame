@@ -1,0 +1,160 @@
+#ui-overlay {
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    font-family: Arial, sans-serif;
+}
+
+#tab-container {
+    display: flex;
+    background: rgba(0, 0, 0, 0.9);
+    border-bottom: 1px solid #333;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 10px;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tab-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.tab-button.active {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-bottom: 2px solid #4a9eff;
+}
+
+#content-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+}
+
+.tab-content {
+    display: none;
+}
+
+/* Selection Panel Styles */
+.entity-stats {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.entity-stats h3 {
+    margin: 0 0 15px 0;
+    color: #4a9eff;
+}
+
+.stat-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.stat-row label {
+    width: 80px;
+    color: #888;
+}
+
+.health-bar {
+    flex: 1;
+    height: 20px;
+    background: rgba(255, 0, 0, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.health-fill {
+    height: 100%;
+    background: #ff3333;
+    transition: width 0.3s ease;
+}
+
+.health-bar span {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    line-height: 20px;
+    color: #fff;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+/* Lists Styles */
+.souls-list,
+.stoonies-list,
+.buildings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.soul-item,
+.stoonie-item,
+.building-item {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.soul-item:hover,
+.stoonie-item:hover,
+.building-item:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.buildings-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.buildings-controls button {
+    flex: 1;
+    padding: 8px;
+    background: #4a9eff;
+    border: none;
+    border-radius: 3px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.buildings-controls button:hover {
+    background: #3a8eff;
+}
+
+.info-message {
+    text-align: center;
+    color: #888;
+    padding: 20px;
+}
+
+/* Scrollbar Styles */
+#content-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#content-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+#content-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+#content-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}

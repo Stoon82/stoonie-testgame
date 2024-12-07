@@ -95,6 +95,10 @@ export class EntityManager {
         return Array.from(this.entities.values());
     }
 
+    getEntitiesByType(type) {
+        return Array.from(this.entities.values()).filter(entity => entity.constructor.name === type);
+    }
+
     update(deltaTime) {
         if (!this.initialized) return;
 

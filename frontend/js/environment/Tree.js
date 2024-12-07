@@ -1,15 +1,15 @@
 import * as THREE from 'three';
+import MapObject from '../core/MapObject.js';
 
-export default class Tree {
-    constructor({ x = 0, z = 0 }) {
-        this.position = new THREE.Vector3(x, 0, z);
+export default class Tree extends MapObject {
+    constructor(gameEngine, config = {}) {
+        super(gameEngine, { x: config.x || 0, y: 0, z: config.z || 0 });
         this.createModel();
     }
 
     createModel() {
         // Create a group to hold the tree parts
         this.mesh = new THREE.Group();
-        this.mesh.entity = this; // Store reference to entity
         
         // Create trunk
         const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 2, 8);
@@ -36,9 +36,5 @@ export default class Tree {
         
         // Position the entire tree
         this.mesh.position.copy(this.position);
-    }
-
-    getMesh() {
-        return this.mesh;
     }
 }

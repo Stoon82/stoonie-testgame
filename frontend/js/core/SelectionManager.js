@@ -17,36 +17,64 @@ export default class SelectionManager {
     update(deltaTime) {
         if (!this.initialized) return;
 
-        // Update selection ring positions
-        this.selectedEntities.forEach(entity => {
-            const ring = this.selectionRings.get(entity.id);
-            if (ring && entity.position) {
-                ring.position.copy(entity.position);
-                ring.position.y = 0.1; // Slightly above ground to avoid z-fighting
-                ring.rotation.y += deltaTime; // Rotate the ring for visual effect
+        // Check all entities and environment objects for selection state
+        const allObjects = [
+            ...this.gameEngine.entityManager.entities,
+            ...this.gameEngine.worldManager.environmentObjects
+        ];
+
+        // First, ensure all selected objects have rings
+        allObjects.forEach(object => {
+            if (object.isSelected) {
+                if (!this.selectionRings.has(object.id)) {
+                    console.log(`Creating selection ring for object ${object.id}`);
+                    this.createSelectionRing(object);
+                }
+            } else {
+                if (this.selectionRings.has(object.id)) {
+                    console.log(`Removing selection ring for object ${object.id}`);
+                    this.removeSelectionRing(object.id);
+                }
             }
         });
 
-        // Remove selection rings for entities that no longer exist
-        for (const [entityId, ring] of this.selectionRings) {
-            if (!this.selectedEntities.has(this.gameEngine.entityManager.getEntityById(entityId))) {
-                this.removeSelectionRing(entityId);
+        // Update positions and rotations of existing rings
+        for (const [objectId, ring] of this.selectionRings.entries()) {
+            const object = allObjects.find(obj => obj.id === objectId);
+            if (!object || !object.isSelected) {
+                console.log(`Removing selection ring for object ${objectId} - no longer exists or not selected`);
+                this.removeSelectionRing(objectId);
+                continue;
+            }
+
+            const mesh = object.getMesh();
+            if (ring && mesh) {
+                if (ring.parent !== mesh) {
+                    mesh.add(ring);
+                    ring.position.set(0, 0.1, 0);
+                }
+                ring.rotation.y += deltaTime;
             }
         }
     }
 
-    toggleSelection(entity, multiSelect = false) {
-        if (!entity) return;
+    toggleSelection(object, multiSelect = false) {
+        if (!object) return;
 
+        // When not multi-selecting, clear all other selections first
         if (!multiSelect) {
-            // Clear previous selection if not multi-selecting
             this.clearSelection();
         }
 
-        if (this.selectedEntities.has(entity)) {
-            this.removeFromSelection(entity);
+        // Toggle the clicked object's selection state
+        object.isSelected = !object.isSelected;
+        
+        if (object.isSelected) {
+            this.selectedEntities.add(object);
+            this.createSelectionRing(object);
         } else {
-            this.addToSelection(entity);
+            this.selectedEntities.delete(object);
+            this.removeSelectionRing(object.id);
         }
 
         // Update the details panel
@@ -57,26 +85,71 @@ export default class SelectionManager {
 
     addToSelection(entity) {
         if (!entity) return;
+        // Add to selection set
         this.selectedEntities.add(entity);
+        // Create selection ring
         this.createSelectionRing(entity);
     }
 
     removeFromSelection(entity) {
-        if (!entity) return;
+        //if (!entity) return;
+        // Remove from selection set
         this.selectedEntities.delete(entity);
+        // Remove selection ring
         this.removeSelectionRing(entity.id);
     }
 
     clearSelection() {
-        this.selectedEntities.forEach(entity => {
-            this.removeSelectionRing(entity.id);
+        // Clear all selection states and rings
+        this.selectedEntities.forEach(object => {
+            console.log(`Clearing selection for object ${object.id}`);
+            object.isSelected = false;
+            this.removeSelectionRing(object.id);
         });
         this.selectedEntities.clear();
     }
 
-    createSelectionRing(entity) {
-        const radius = entity.getMesh().geometry.boundingSphere?.radius || 1;
-        const geometry = new THREE.RingGeometry(radius * 1.2, radius * 1.3, 32);
+    removeSelectionRing(objectId) {
+        const ring = this.selectionRings.get(objectId);
+        if (ring) {
+            console.log(`Removing ring for object ${objectId}`);
+            if (ring.parent) {
+                ring.parent.remove(ring);
+            }
+            if (ring.geometry) ring.geometry.dispose();
+            if (ring.material) ring.material.dispose();
+            this.selectionRings.delete(objectId);
+        }
+    }
+
+    createSelectionRing(object) {
+        if (!object || !object.getMesh()) {
+            console.warn('Cannot create selection ring: object or mesh is undefined');
+            return null;
+        }
+
+        const mesh = object.getMesh();
+        let radius = 1; // Default radius
+        let radiusMultiplier = 1.2; // Default size multiplier
+
+        if (mesh.geometry) {
+            if (!mesh.geometry.boundingSphere) {
+                mesh.geometry.computeBoundingSphere();
+            }
+            radius = mesh.geometry.boundingSphere?.radius || radius;
+
+            // Adjust size based on entity type
+            if (object.constructor.name === 'Building') {
+                radiusMultiplier = 1.5; // 50% larger for buildings
+            }
+        }
+
+        const geometry = new THREE.RingGeometry(
+            radius * radiusMultiplier,      // inner radius
+            radius * (radiusMultiplier + 0.1), // outer radius
+            32  // segments
+        );
+        
         const material = new THREE.MeshBasicMaterial({
             color: 0x00ff00,
             side: THREE.DoubleSide,
@@ -86,23 +159,12 @@ export default class SelectionManager {
         
         const ring = new THREE.Mesh(geometry, material);
         ring.rotation.x = -Math.PI / 2; // Lay flat
-        ring.position.copy(entity.position);
-        ring.position.y += 0.1; // Slightly above ground to prevent z-fighting
+        ring.position.set(0, 0.1, 0); // Slightly above the mesh
         
-        this.gameEngine.scene.add(ring);
-        this.selectionRings.set(entity.id, ring);
+        mesh.add(ring);
+        this.selectionRings.set(object.id, ring);
         
         return ring;
-    }
-
-    removeSelectionRing(entityId) {
-        const ring = this.selectionRings.get(entityId);
-        if (ring) {
-            this.gameEngine.scene.remove(ring);
-            ring.geometry.dispose();
-            ring.material.dispose();
-            this.selectionRings.delete(entityId);
-        }
     }
 
     getSelectedEntities() {
@@ -113,7 +175,11 @@ export default class SelectionManager {
         return this.selectedEntities.size > 0;
     }
 
-    isSelected(entity) {
-        return this.selectedEntities.has(entity);
+    isSelected(object) {
+        return this.selectedEntities.has(object);
+    }
+
+    getSelection() {
+        return this.getSelectedEntities();
     }
 }

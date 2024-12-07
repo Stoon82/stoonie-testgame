@@ -9,6 +9,12 @@
   - Camera and controls handling
   - Integration of all managers
 
+- **MapObject.js**
+  - Base class for all game objects (entities and environment)
+  - Unified ID generation and tracking
+  - Position and selection state management
+  - Common mesh and model handling
+
 - **EntityManager.js**
   - Manages all game entities (Stoonies, DemonStoonies)
   - Entity creation, removal, and lifecycle
@@ -20,6 +26,12 @@
   - World generation and updates
   - Terrain and obstacle placement
   - Resource management
+
+- **SelectionManager.js**
+  - Unified selection system for all game objects
+  - Visual selection indicators (rings)
+  - Multi-select support with shift key
+  - Selection state persistence
 
 - **UIManager.js**
   - Mouse interaction handling
@@ -296,6 +308,30 @@ class ClassName {
 
 ## Development Guidelines
 ### Recent Updates (2024-12-07)
+
+#### MapObject System
+- Introduced MapObject as base class for all game objects
+- Unified handling of:
+  - Unique IDs (using crypto.randomUUID)
+  - Position management
+  - Selection state
+  - Model creation
+  - Mesh handling
+
+#### Selection System Improvements
+- All game objects (entities, trees, buildings) now selectable
+- Consistent selection rings for all objects
+- Proper cleanup of selection indicators
+- Multi-select support with shift key
+- Selection state persists correctly
+- Debug logging for selection events
+
+#### Environment Object Enhancements
+- Trees and buildings properly inherit from MapObject
+- Consistent positioning system for all objects
+- Minimum distance rules between objects
+- Proper scene integration
+- Improved model creation methods
 
 ### Combat System
 - Implemented area-of-effect damage system for demons

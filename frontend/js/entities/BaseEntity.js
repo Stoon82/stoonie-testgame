@@ -1,46 +1,31 @@
 import * as THREE from 'three';
+import MapObject from '../core/MapObject.js';
 
-export default class BaseEntity {
-    constructor(id, config = {}, gameEngine) {
-        this.id = id;
-        this.gameEngine = gameEngine;
-        this.mesh = null;
-        this._position = new THREE.Vector3();
-        if (config.position) {
-            this._position.copy(config.position);
-        }
+export default class BaseEntity extends MapObject {
+    constructor(gameEngine, config = {}) {
+        super(gameEngine, config);
+        
+        // Entity-specific properties
+        this.health = config.health || 100;
+        this.maxHealth = config.maxHealth || 100;
+        this.energy = config.energy || 100;
+        this.maxEnergy = config.maxEnergy || 100;
+        this.speed = config.speed || 1;
+        this._isDead = false;
+        
+        // Movement properties
         this.velocity = new THREE.Vector3();
         this.acceleration = new THREE.Vector3();
         this.rotation = new THREE.Euler();
         
-        // Basic properties
-        this.health = 100;
-        this.energy = 100;
+        // Age and damage properties
         this.age = 0;
-
-        // Damage properties
         this.lastDamageTime = 0;
         this.damageCooldown = 0.5; // Half second between damage instances
-        this._isDead = false;
-
+        
         // Damage indicator properties
         this.damageIndicators = [];
         this.damageIndicatorLifetime = 3.0; // 3 seconds visibility
-    }
-
-    get position() {
-        return this._position;
-    }
-
-    set position(value) {
-        if (value instanceof THREE.Vector3) {
-            this._position.copy(value);
-        } else {
-            this._position.set(value.x || 0, value.y || 0, value.z || 0);
-        }
-        if (this.mesh) {
-            this.mesh.position.copy(this._position);
-        }
     }
 
     getMesh() {
@@ -54,23 +39,24 @@ export default class BaseEntity {
         
         // Update position using the velocity
         const movement = this.velocity.clone().multiplyScalar(deltaTime);
-        this._position.add(movement);
+        this.position.add(movement);
         
         if (this.mesh) {
-            this.mesh.position.copy(this._position);
+            this.mesh.position.copy(this.position);
         }
 
         // Apply friction
         this.velocity.multiplyScalar(0.95);
         this.acceleration.multiplyScalar(0);
-
+        
         this.age += deltaTime;
         
         // Update damage indicators
         this.updateDamageIndicators(deltaTime);
 
         // Check for death
-        if (this.isDead() && !this._isDead) {
+        const isDead = this.isDead();
+        if (isDead && !this._isDead) {
             this._isDead = true;
             console.log(`${this.constructor.name} #${this.id} has died`);
             
@@ -254,15 +240,15 @@ export default class BaseEntity {
     }
 
     setPosition(x, y, z) {
-        this._position.set(x, y, z);
+        this.position.set(x, y, z);
         if (this.mesh) {
-            this.mesh.position.copy(this._position);
+            this.mesh.position.copy(this.position);
         }
     }
 
     damage(amount) {
         // Check if entity is already dead
-        if (this._isDead) return;
+        if (this.isDead()) return;
 
         // Check damage cooldown
         if (this.age - this.lastDamageTime < this.damageCooldown) {

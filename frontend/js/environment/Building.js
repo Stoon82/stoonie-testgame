@@ -1,8 +1,10 @@
 import * as THREE from 'three';
+import MapObject from '../core/MapObject.js';
 
-export default class Building {
-    constructor({ x = 0, z = 0 }) {
-        this.position = new THREE.Vector3(x, 0, z);
+export default class Building extends MapObject {
+    constructor(gameEngine, { x = 0, z = 0, type = 'house' } = {}) {
+        super(gameEngine, { x, y: 0, z, type });
+        this.type = type;
         this.createModel();
     }
 

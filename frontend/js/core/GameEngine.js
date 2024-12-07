@@ -41,7 +41,7 @@ export default class GameEngine {
         this.inputManager = new InputManager(this);
         
         this.selectedEntity = null;
-        this.initialized = false;
+        this.isInitialized = false;
 
         // Register managers with InitManager
         this.initManager.registerManager('worldManager', this.worldManager);
@@ -169,6 +169,11 @@ export default class GameEngine {
         }
     }
 
+    initializeThreeJS() {
+        this.setupRenderer();
+        this.setupCamera();
+    }
+
     handleResize() {
         if (!this.camera || !this.renderer) return;
 
@@ -186,23 +191,21 @@ export default class GameEngine {
      */
     async initialize() {
         try {
-            if (this.initialized) return;
-            console.log('Initializing GameEngine');
-
-            // Initialize core components first
-            this.setupRenderer();
-            this.setupCamera();
-
-            // Initialize managers through InitManager
+            console.log('Initializing game engine...');
+            
+            // Initialize Three.js components
+            this.initializeThreeJS();
+            
+            // Initialize all managers in the correct order
             await this.initManager.initializeGame();
-
-            // Setup window resize handler
-            // window.addEventListener('resize', this.onWindowResize.bind(this));
-
-            this.initialized = true;
+            
+            // Start the game loop
+            this.isInitialized = true;
             this.update();
+            
+            console.log('Game engine initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize game:', error);
+            console.error('Failed to initialize game engine:', error);
             throw error;
         }
     }
@@ -218,7 +221,7 @@ export default class GameEngine {
      * Updates the game engine.
      */
     update() {
-        if (!this.initialized) return;
+        if (!this.isInitialized) return;
 
         const deltaTime = this.clock.getDelta();
         this.age += deltaTime;

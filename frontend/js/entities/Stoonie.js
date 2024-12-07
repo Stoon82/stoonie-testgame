@@ -242,6 +242,8 @@ export default class Stoonie extends BaseEntity {
     createModel() {
         // Create a sphere for the Stoonie
         const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+        geometry.computeBoundingSphere(); // Compute bounding sphere for selection ring
+        
         const material = new THREE.MeshPhongMaterial({ 
             color: this.gender === 'male' ? 0xff0000 : 0x0000ff,  // Red for male, Blue for female
             shininess: 30

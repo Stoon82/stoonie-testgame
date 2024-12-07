@@ -23,6 +23,13 @@ A unique game where you manage souls and their Stoonie vessels in a dynamic ecos
    - Strategic targeting system
 
 ### Game Mechanics
+- **Object System**
+  - Unified base class (MapObject) for all game objects
+  - Consistent selection and interaction system
+  - Unique IDs for all objects
+  - Position and model management
+  - Visual selection indicators
+
 - **Combat System**
   - Demon Stoonies actively hunt regular Stoonies
   - Stoonies can flee or fight back based on their capabilities
@@ -98,6 +105,21 @@ StoonGame_NEW/
 │   └── index.html       # Main entry point
 └── README.md
 ```
+
+### Technical Features
+- **Core Architecture**
+  - MapObject-based inheritance system
+  - Unified object management
+  - Consistent selection handling
+  - Efficient scene rendering
+  - Debug mode with visual indicators
+
+- **Environment System**
+  - Trees and buildings inherit from MapObject
+  - Random placement with minimum distance rules
+  - Interactive selection and hover information
+  - Consistent visual feedback
+  - Proper scene integration
 
 ## Contributing
 1. Fork the repository

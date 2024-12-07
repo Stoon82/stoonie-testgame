@@ -130,7 +130,8 @@ export default class InputManager {
             (event.target.id === 'ui-overlay' || 
              event.target.id === 'stats-overlay' || 
              event.target.id === 'souls-panel' ||
-             event.target.id === 'debug-overlay')) {
+             event.target.id === 'debug-overlay' ||
+             event.target.id === 'selection-info-panel')) {
             return;
         }
 
@@ -144,14 +145,16 @@ export default class InputManager {
 
         // Handle entity selection or start panning on left click
         if (event.button === 0) {
-            const entity = this.getEntityUnderMouse(event);
+            const entity = this.getEntityUnderMouse();
             if (entity) {
                 // If over an entity, handle selection
-                this.gameEngine.selectionManager.toggleSelection(entity, this.modifierKeys.shift);
-            }
-            // If not over an entity and not holding shift, clear selection and prepare for panning
-            else if (!this.modifierKeys.shift) {
-                this.gameEngine.selectionManager.clearSelection();
+                this.gameEngine.selectionManager.toggleSelection(entity, this.modifierKeys.ctrl);
+            } else {
+                // If not over an entity and not holding ctrl, clear selection
+                if (!this.modifierKeys.ctrl) {
+                    this.gameEngine.selectionManager.clearSelection();
+                }
+                // Start dragging regardless of ctrl state when clicking empty space
                 this.isDragging = true;
             }
         }
@@ -452,7 +455,10 @@ export default class InputManager {
         if (this.gameEngine.entityManager) {
             this.gameEngine.entityManager.entities.forEach(entity => {
                 if (entity.mesh) {
-                    entity.mesh.entity = entity; // Store reference to entity on mesh
+                    // Store reference to entity on mesh and all its children
+                    entity.mesh.traverse(child => {
+                        child.entity = entity;
+                    });
                     meshes.push(entity.mesh);
                 }
             });
@@ -462,7 +468,10 @@ export default class InputManager {
         if (this.gameEngine.worldManager) {
             this.gameEngine.worldManager.environmentObjects.forEach(object => {
                 if (object.mesh) {
-                    object.mesh.entity = object; // Store reference to environment object on mesh
+                    // Store reference to entity on mesh and all its children
+                    object.mesh.traverse(child => {
+                        child.entity = object;
+                    });
                     meshes.push(object.mesh);
                 }
             });
@@ -471,18 +480,9 @@ export default class InputManager {
         // Perform raycast
         const intersects = raycaster.intersectObjects(meshes, true);
 
-        // Find the first intersected object
-        for (const intersect of intersects) {
-            let object = intersect.object;
-            
-            // Traverse up to find the root mesh with entity reference
-            while (object && !object.entity) {
-                object = object.parent;
-            }
-            
-            if (object && object.entity) {
-                return object.entity;
-            }
+        // Return the entity of the first intersected mesh
+        if (intersects.length > 0 && intersects[0].object.entity) {
+            return intersects[0].object.entity;
         }
 
         return null;
