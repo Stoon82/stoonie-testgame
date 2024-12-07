@@ -48,9 +48,12 @@
 - **BaseEntity.js**
   - Base class for all game entities
   - Common properties (position, velocity, health)
+  - Damage cooldown system (0.5s between hits)
+  - Automatic death cleanup after 1s delay
   - Physics and movement calculations
   - Core entity behaviors
   - Mesh-entity reference system
+  - Damage indicator system
 
 - **Stoonie.js**
   - Gender-specific properties (red=male, blue=female)
@@ -61,7 +64,9 @@
 
 - **DemonStoonie.js**
   - Enemy entities (purple with horns)
-  - Attack behaviors and damage dealing
+  - Area-of-effect attacks with 8-unit range
+  - Dynamic damage with random variation
+  - Visual feedback during attacks
   - Pathfinding and targeting
   - Custom stats display
 
@@ -167,6 +172,45 @@
    - Velocity vectors
    - Interaction radius
 
+## Combat System
+
+### Damage Mechanics
+1. **Cooldown System**
+   - Entities can only take damage every 0.5 seconds
+   - Prevents rapid-fire damage from overwhelming entities
+   - Gives Stoonies a chance to escape from demons
+
+2. **Death Handling**
+   - Entities are removed from scene 1 second after death
+   - Death state prevents further damage
+   - Visual feedback during death sequence
+   - Proper cleanup of all entity resources
+
+3. **Area Attacks**
+   - Demons affect all Stoonies within 8 units
+   - Base damage with random variation (±20%)
+   - Visual feedback during attacks
+   - Damage indicators show amount of damage taken
+
+4. **Visual Feedback**
+   - Damage numbers appear above damaged entities
+   - Selection rings scale with entity size
+   - Demons glow red during attacks
+   - Death effects visible before cleanup
+
+### Selection System
+1. **Selection Rings**
+   - Green rings appear around selected entities
+   - Ring size scales with entity's bounding sphere
+   - Rings float slightly above ground to prevent z-fighting
+   - Semi-transparent for better visibility
+
+2. **Multi-Select**
+   - Hold Shift to select multiple entities
+   - Clear selection by clicking empty space
+   - Selected entities show in details panel
+   - Selection persists until manually cleared
+
 ## UI Components (`frontend/js/ui/`)
 - **StatsOverlay.js**
   - Real-time entity information display
@@ -254,15 +298,11 @@ class ClassName {
 ### Recent Updates (2024-12-07)
 
 ### Combat System
-- Implemented DemonStoonie combat mechanics
-  - Detection range: 15 units
-  - Attack range: 1.5 units
-  - Base damage: 20
-  - Attack cooldown: 1 second
-- Added Stoonie defensive behaviors
-  - Flee when health < 30% or when pregnant
-  - Fight back when equipped with combat-capable souls
-  - Shield system for damage reduction
+- Implemented area-of-effect damage system for demons
+- Added damage cooldown (0.5s) to prevent rapid damage
+- Improved death handling with cleanup delay
+- Fixed selection rings and scaling
+- Enhanced visual feedback for combat
 
 ### Reproduction System
 - Added pregnancy mechanics
@@ -321,19 +361,11 @@ class ClassName {
 ## Changelog
 
 ### Version 0.1.5 (2024-12-07)
-- Enhanced stats overlay with detailed information
-  - Added percentage labels to health and energy bars
-  - Added needs section (hunger, thirst, rest)
-  - Added age and behavior state display with color coding
-  - Added shield indicator when active
-  - Improved soul section with XP progress bar and powers list
-  - Enhanced pregnancy display with time remaining
-  - Improved overall spacing and organization
-  - Added color coding for different types of information
-- Moved UI components to dedicated ui/ directory
-  - Relocated UIOverlay.js from core/ to ui/
-  - Created new stats_overlay.js and details_panel.js
-- Improved code organization and maintainability
+- Implemented area-of-effect damage system for demons
+- Added damage cooldown (0.5s) to prevent rapid damage
+- Improved death handling with cleanup delay
+- Fixed selection rings and scaling
+- Enhanced visual feedback for combat
 
 ### Version 0.1.4 (2024-12-07)
 - Added comprehensive soul management UI
