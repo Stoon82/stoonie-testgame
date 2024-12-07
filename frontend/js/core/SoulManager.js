@@ -1,103 +1,124 @@
-import { StoonieSoul } from '../entities/StoonieSoul.js';
-
-export class SoulManager {
+class SoulManager {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
         this.souls = new Map();
         this.availableSouls = [];
-        this.soulCount = 0;
-        
-        // Start with 3 souls
-        this.createInitialSouls(3);
+        this.initialized = false;
     }
 
-    createInitialSouls(count) {
-        for (let i = 0; i < count; i++) {
-            const soul = new StoonieSoul(this.soulCount++);
-            this.souls.set(soul.id, soul);
-            this.availableSouls.push(soul);
-        }
+    initialize() {
+        if (this.initialized) return;
+        console.log('Initializing SoulManager');
+        
+        // Create initial souls
+        this.createSoul('Wanderer');
+        this.createSoul('Seeker');
+        this.createSoul('Guardian');
+        
+        this.initialized = true;
+    }
+
+    createSoul(name) {
+        const soul = {
+            id: Math.random().toString(36).substr(2, 9),
+            name: name,
+            stoonie: null,
+            experience: 0,
+            level: 1,
+            powers: new Set(),
+            update: function(deltaTime) {
+                if (this.stoonie && this.stoonie.isActive()) {
+                    // Soul-specific updates here
+                }
+            }
+        };
+        
+        this.souls.set(soul.id, soul);
+        this.availableSouls.push(soul);
+        console.log(`Created soul: ${soul.name} (${soul.id})`);
+        return soul;
     }
 
     getAvailableSoul() {
         return this.availableSouls.length > 0 ? this.availableSouls[0] : null;
     }
 
-    getAvailableSouls() {
-        return this.availableSouls;
-    }
-
     connectSoulToStoonie(soul, stoonie) {
-        if (!soul) {
-            console.log('Invalid soul: soul is null or undefined');
-            return false;
-        }
-        if (!stoonie) {
-            console.log('Invalid stoonie: stoonie is null or undefined');
-            return false;
-        }
-        if (!this.souls.has(soul.id)) {
-            console.log('Soul not found in souls collection');
+        if (!soul || !stoonie) {
+            console.warn('Cannot connect: soul or stoonie is null');
             return false;
         }
 
-        // Check if soul is available
-        const index = this.availableSouls.indexOf(soul);
-        if (index === -1) {
-            console.log('Soul is not available (already connected or invalid)');
+        if (soul.stoonie) {
+            console.warn(`Soul ${soul.id} is already connected to a stoonie`);
             return false;
         }
 
-        // Check if stoonie already has a soul
         if (stoonie.soul) {
-            console.log('Stoonie already has a soul connected');
+            console.warn(`Stoonie ${stoonie.id} already has a soul`);
             return false;
         }
 
-        // Connect soul to stoonie
-        this.availableSouls.splice(index, 1);
-        soul.connectedStoonie = stoonie;
+        // Remove from available souls
+        const index = this.availableSouls.indexOf(soul);
+        if (index > -1) {
+            this.availableSouls.splice(index, 1);
+        }
+
+        // Connect soul and stoonie
+        soul.stoonie = stoonie;
         stoonie.soul = soul;
-        
-        console.log(`Successfully connected soul ${soul.id} to stoonie`);
+
+        console.log(`Connected soul ${soul.id} to stoonie ${stoonie.id}`);
         return true;
     }
 
-    disconnectSoulFromStoonie(stoonie) {
-        if (!stoonie.soul) return;
-        
-        const soul = stoonie.soul;
-        soul.disconnectFromStoonie();
-        this.availableSouls.push(soul);
-    }
-
-    addExperience(soul, amount) {
-        if (this.souls.has(soul.id)) {
-            soul.addExperience(amount);
+    disconnectSoulFromStoonie(soul) {
+        if (!soul) {
+            console.warn('Cannot disconnect: soul is null');
+            return;
         }
-    }
 
-    getSoulInfo(soul) {
-        return {
-            level: soul.level,
-            experience: soul.experience,
-            nextLevel: soul.experienceToNextLevel,
-            powers: Array.from(soul.powers)
-        };
+        const stoonie = soul.stoonie;
+        if (!stoonie) {
+            console.warn(`Soul ${soul.id} is not connected to any stoonie`);
+            return;
+        }
+
+        // Disconnect both sides
+        soul.stoonie = null;
+        stoonie.soul = null;
+
+        // Make soul available again
+        if (!this.availableSouls.includes(soul)) {
+            this.availableSouls.push(soul);
+        }
+
+        console.log(`Disconnected soul ${soul.id} from stoonie`);
     }
 
     update(deltaTime) {
-        // Update all active souls
+        if (!this.initialized) return;
+
         this.souls.forEach(soul => {
-            if (soul.connectedStoonie) {
-                // Add experience based on stoonie actions
-                if (soul.connectedStoonie.isPregnant) {
-                    this.addExperience(soul, 0.1 * deltaTime); // XP for being pregnant
-                }
-                if (soul.connectedStoonie.lastMateTime > soul.connectedStoonie.age - 1) {
-                    this.addExperience(soul, 10); // XP for mating
-                }
+            if (soul && soul.stoonie) {
+                soul.update(deltaTime);
             }
         });
     }
+
+    addExperience(soul, amount) {
+        if (!soul) return;
+        
+        soul.experience += amount;
+        
+        // Level up check
+        const nextLevel = Math.floor(Math.sqrt(soul.experience / 100)) + 1;
+        if (nextLevel > soul.level) {
+            soul.level = nextLevel;
+            console.log(`Soul ${soul.id} leveled up to ${soul.level}!`);
+        }
+    }
 }
+
+export default SoulManager;

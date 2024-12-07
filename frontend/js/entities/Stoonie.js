@@ -20,6 +20,18 @@ export default class Stoonie extends BaseEntity {
         this.shield = 0;
         this.damageNumbers = []; // Array to store damage number objects
         
+        // Combat properties
+        this.attackDamage = 5;
+        this.attackCooldown = 1.5;
+        this.lastAttackTime = 0;
+        this.fleeDistance = 10;
+        this.nearbyDemons = [];
+        this.behaviorState = 'wander'; // wander, flee, fight
+        
+        // Job-related properties
+        this.currentJob = null;
+        this.moveTarget = null;
+
         this.createModel();
         this.createMesh();
 
@@ -52,14 +64,179 @@ export default class Stoonie extends BaseEntity {
             this.updatePregnancyVisual();
         }
 
-        // Update damage numbers
+        // Execute behavior based on state
+        switch (this.behaviorState) {
+            case 'wander':
+                this.wander(deltaTime);
+                break;
+            case 'flee':
+                this.flee(deltaTime);
+                break;
+            case 'fight':
+                this.fight(deltaTime);
+                break;
+            case 'working':
+                // Job updates are handled by JobManager
+                if (this.moveTarget) {
+                    this.moveTowards(this.moveTarget);
+                }
+                break;
+        }
+
+        // Update visual indicators
         this.updateDamageNumbers(deltaTime);
-
-        // Random movement
-        this.wander(deltaTime);
-
-        // Update soul indicator
         this.updateSoulIndicator();
+        this.updatePregnancyVisual();
+    }
+
+    updateBehavior(deltaTime) {
+        // Update nearby demons list
+        this.updateNearbyDemons();
+
+        if (this.nearbyDemons.length === 0) {
+            this.behaviorState = 'wander';
+            this.wander(deltaTime);
+            return;
+        }
+
+        // Decide behavior based on health and powers
+        if (this.health < 30 || (this.isPregnant && this.health < 50)) {
+            if (this.behaviorState !== 'flee') {
+                console.log(`Stoonie ${this.id} is fleeing! Health: ${this.health.toFixed(1)}${this.isPregnant ? ' (Pregnant)' : ''}`);
+            }
+            this.behaviorState = 'flee';
+            this.flee(deltaTime);
+        } else if (this.soul && (this.soul.powers.has('energyBlast') || this.soul.powers.has('shieldBubble'))) {
+            if (this.behaviorState !== 'fight') {
+                console.log(`Stoonie ${this.id} is fighting back with soul powers!`);
+            }
+            this.behaviorState = 'fight';
+            this.fight(deltaTime);
+        } else {
+            this.behaviorState = 'flee';
+            this.flee(deltaTime);
+        }
+    }
+
+    updateNearbyDemons() {
+        this.nearbyDemons = [];
+        const entities = Array.from(this.gameEngine.entityManager.entities.values());
+        
+        for (const entity of entities) {
+            if (entity.constructor.name === 'DemonStoonie') {
+                const distance = this.position.distanceTo(entity.position);
+                if (distance < this.fleeDistance) {
+                    this.nearbyDemons.push({ demon: entity, distance: distance });
+                }
+            }
+        }
+        
+        // Sort by distance
+        this.nearbyDemons.sort((a, b) => a.distance - b.distance);
+    }
+
+    flee(deltaTime) {
+        if (this.nearbyDemons.length === 0) return;
+
+        // Calculate average direction to flee from all nearby demons
+        const fleeDirection = new THREE.Vector3();
+        this.nearbyDemons.forEach(({ demon }) => {
+            const awayFromDemon = new THREE.Vector3().subVectors(this.position, demon.position).normalize();
+            fleeDirection.add(awayFromDemon);
+        });
+        fleeDirection.normalize();
+
+        // Apply fleeing force
+        const fleeSpeed = this.maxSpeed * (this.soul && this.soul.powers.has('speedBoost') ? 1.5 : 1);
+        const force = fleeDirection.multiplyScalar(fleeSpeed * deltaTime);
+        this.applyForce(force);
+    }
+
+    fight(deltaTime) {
+        if (this.nearbyDemons.length === 0) return;
+
+        const nearestDemon = this.nearbyDemons[0].demon;
+        const distance = this.nearbyDemons[0].distance;
+
+        // Move to optimal fighting distance (just within attack range)
+        const optimalDistance = 2;
+        const towardsDemon = new THREE.Vector3().subVectors(nearestDemon.position, this.position).normalize();
+        
+        if (distance > optimalDistance) {
+            const force = towardsDemon.multiplyScalar(this.maxSpeed * deltaTime);
+            this.applyForce(force);
+        } else if (distance < optimalDistance * 0.5) {
+            const force = towardsDemon.multiplyScalar(-this.maxSpeed * deltaTime);
+            this.applyForce(force);
+        }
+
+        // Attack if in range and off cooldown
+        if (distance < 2 && this.age - this.lastAttackTime > this.attackCooldown) {
+            this.attackDemon(nearestDemon);
+        }
+    }
+
+    attackDemon(demon) {
+        this.lastAttackTime = this.age;
+        
+        // Base damage
+        let damage = this.attackDamage;
+        
+        // Bonus damage from soul powers
+        if (this.soul && this.soul.powers.has('energyBlast')) {
+            damage *= 2;
+            
+            // Visual effect for energy blast
+            const blastGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+            const blastMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.7
+            });
+            const blast = new THREE.Mesh(blastGeometry, blastMaterial);
+            blast.position.copy(this.position);
+            this.gameEngine.scene.add(blast);
+            
+            // Animate blast
+            const direction = new THREE.Vector3().subVectors(demon.position, this.position).normalize();
+            const animate = () => {
+                blast.position.add(direction.multiplyScalar(0.2));
+                blast.scale.multiplyScalar(0.95);
+                blast.material.opacity *= 0.95;
+                
+                if (blast.material.opacity > 0.1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    this.gameEngine.scene.remove(blast);
+                    blast.geometry.dispose();
+                    blast.material.dispose();
+                }
+            };
+            animate();
+        }
+        
+        demon.takeDamage(damage);
+    }
+
+    defendAgainstAttack(incomingDamage) {
+        let finalDamage = incomingDamage;
+        console.log(`Stoonie ${this.id} defending against ${incomingDamage} damage. Current health: ${this.health.toFixed(1)}`);
+
+        // Apply shield if available
+        if (this.shield > 0) {
+            const shieldDamage = Math.min(this.shield, finalDamage);
+            this.shield -= shieldDamage;
+            finalDamage -= shieldDamage;
+            console.log(`Shield absorbed ${shieldDamage} damage. Shield remaining: ${this.shield.toFixed(1)}`);
+        }
+
+        // Apply remaining damage
+        if (finalDamage > 0) {
+            this.takeDamage(finalDamage);
+            console.log(`Stoonie ${this.id} took ${finalDamage} damage. Health remaining: ${this.health.toFixed(1)}`);
+        }
+
+        return finalDamage;
     }
 
     createModel() {
@@ -152,18 +329,21 @@ export default class Stoonie extends BaseEntity {
     }
 
     updatePregnancyVisual() {
-        if (!this.pregnancyIndicator || !this.pregnancyProgress) return;
-
-        const progress = this.pregnancyTime / this.pregnancyDuration;
-        this.pregnancyIndicator.children[0].material.visible = true;
-        this.pregnancyProgress.material.visible = true;
+        if (!this.pregnancyIndicator) {
+            // Create pregnancy indicator (a small sphere above the Stoonie)
+            const geometry = new THREE.SphereGeometry(0.2, 16, 16);
+            const material = new THREE.MeshBasicMaterial({ color: 0xff69b4 });
+            this.pregnancyIndicator = new THREE.Mesh(geometry, material);
+            this.mesh.add(this.pregnancyIndicator);
+            this.pregnancyIndicator.position.y = 1;
+        }
         
-        // Scale the progress ring based on pregnancy progress
-        this.pregnancyProgress.scale.set(progress, progress, 1);
-        
-        // Pulse effect
-        const pulseScale = 1 + Math.sin(Date.now() * 0.005) * 0.1;
-        this.pregnancyIndicator.scale.set(pulseScale, pulseScale, pulseScale);
+        this.pregnancyIndicator.visible = this.isPregnant;
+        if (this.isPregnant) {
+            // Pulse the indicator
+            const scale = 0.8 + 0.2 * Math.sin(this.age * 5);
+            this.pregnancyIndicator.scale.set(scale, scale, scale);
+        }
     }
 
     showDamageNumber(amount) {
@@ -282,15 +462,27 @@ export default class Stoonie extends BaseEntity {
     }
 
     giveBirth() {
+        console.log(`Stoonie ${this.id} is giving birth!`);
         this.isPregnant = false;
         this.pregnancyTime = 0;
-        if (this.pregnancyIndicator) {
-            this.pregnancyIndicator.material.visible = false;
-        }
         
-        // Signal to EntityManager to create new Stoonie
-        if (this.onBirth) {
-            this.onBirth(this.position);
+        // Create new Stoonie
+        const config = {
+            position: new THREE.Vector3(
+                this.position.x + (Math.random() - 0.5),
+                this.position.y,
+                this.position.z + (Math.random() - 0.5)
+            ),
+            gender: Math.random() > 0.5 ? 'male' : 'female'
+        };
+        
+        const baby = this.gameEngine.entityManager.spawnEntity('Stoonie', config);
+        if (baby) {
+            console.log(`New baby Stoonie ${baby.id} born! Gender: ${config.gender}`);
+            // Add the baby to the scene
+            this.gameEngine.scene.add(baby.mesh);
+        } else {
+            console.error('Failed to create baby Stoonie');
         }
     }
 
@@ -336,5 +528,28 @@ export default class Stoonie extends BaseEntity {
             // Return soul to pool when dying
             this.gameEngine.soulManager.disconnectSoulFromStoonie(this);
         }
+    }
+
+    setJob(job) {
+        this.currentJob = job;
+        this.behaviorState = 'working';
+        console.log(`Stoonie ${this.id} starting job: ${job.type}`);
+    }
+
+    clearJob() {
+        this.currentJob = null;
+        this.behaviorState = 'wander';
+        this.moveTarget = null;
+        console.log(`Stoonie ${this.id} finished job`);
+    }
+
+    moveTowards(target) {
+        this.moveTarget = target;
+        const direction = new THREE.Vector3()
+            .subVectors(target, this.position)
+            .normalize();
+        
+        const force = direction.multiplyScalar(this.maxSpeed);
+        this.applyForce(force);
     }
 }

@@ -12,6 +12,8 @@ export default class DemonStoonie extends BaseEntity {
         this.attackCooldown = 1; // seconds
         this.lastAttackTime = 0;
         this.wanderAngle = Math.random() * Math.PI * 2;
+        this.detectionRange = 15; // Range to detect Stoonies
+        this.attackRange = 1.5;   // Range to attack Stoonies
         
         this.createModel();
         this.createMesh();
@@ -53,7 +55,7 @@ export default class DemonStoonie extends BaseEntity {
 
     update(deltaTime) {
         super.update(deltaTime);
-
+        
         if (this.target && !this.target.isDead()) {
             this.chase(this.target, deltaTime);
         } else {
@@ -84,23 +86,21 @@ export default class DemonStoonie extends BaseEntity {
     }
 
     chase(target, deltaTime) {
+        if (!target) return;
+
         const direction = new THREE.Vector3()
             .subVectors(target.position, this.position)
             .normalize();
         
         const force = direction.multiplyScalar(this.maxSpeed * deltaTime);
         this.applyForce(force);
-
-        // Attack if close enough
-        if (this.position.distanceTo(target.position) < 1.5) {
-            this.attack(target);
-        }
     }
 
     attack(stoonie) {
         if (this.age - this.lastAttackTime < this.attackCooldown) return false;
         
-        stoonie.takeDamage(this.damage);
+        console.log(`Demon Stoonie ${this.id} attacking Stoonie ${stoonie.id}!`);
+        const damage = stoonie.defendAgainstAttack(this.damage);
         this.lastAttackTime = this.age;
 
         // Visual feedback for attack
@@ -109,7 +109,7 @@ export default class DemonStoonie extends BaseEntity {
             this.mesh.material.emissive.setHex(0x400040);
         }, 100);
 
-        return true;
+        return damage > 0;
     }
 
     checkInteractions(entities) {
@@ -120,7 +120,7 @@ export default class DemonStoonie extends BaseEntity {
             if (entity === this || entity.constructor.name !== 'Stoonie' || entity.isDead()) continue;
 
             const distance = this.position.distanceTo(entity.position);
-            if (distance < nearestDistance) {
+            if (distance < this.detectionRange && distance < nearestDistance) {
                 nearestDistance = distance;
                 nearestStoonie = entity;
             }
@@ -129,6 +129,9 @@ export default class DemonStoonie extends BaseEntity {
         // Update target if found a closer Stoonie
         if (nearestStoonie && (!this.target || this.target.isDead() || 
             nearestDistance < this.position.distanceTo(this.target.position))) {
+            if (this.target !== nearestStoonie) {
+                console.log(`Demon Stoonie ${this.id} found new target: Stoonie ${nearestStoonie.id} at distance ${nearestDistance.toFixed(1)}`);
+            }
             this.target = nearestStoonie;
         }
     }

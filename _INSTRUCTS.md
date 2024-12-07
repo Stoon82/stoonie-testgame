@@ -131,39 +131,163 @@
    - Different stats for different entities
    - Soul status shown if connected
 
-2. **Debug Mode (Shift Key)**
+2. **Soul Overview Panel**
+   - Located on the left side of the screen
+   - Shows total soul count and status
+   - Displays individual soul cards
+   - Color-coded for connection status
+   - Shows experience progress bars
+   - Lists unlocked powers
+   - Displays connected Stoonie info
+
+3. **Selection System**
+   - Click to select single Stoonie
+   - Shift+Click for multi-select
+   - Selection ring around selected Stoonies
+   - Selection panel shows detailed stats
+   - Clear selection by clicking empty space
+
+4. **Debug Mode (Shift Key)**
    - FPS counter
    - Entity population statistics
    - Direction indicators
    - Velocity vectors
    - Interaction radius
 
-3. **Spawn Controls**
-   - Green button spawns Stoonie
-   - Red button spawns Demon
-   - Random spawn position
-   - Automatic soul connection
+## Code Standards and Patterns
+
+### Export/Import Standards
+- Use default exports for all classes:
+```javascript
+// Good
+export default ClassName;
+
+// Bad
+export { ClassName };
+```
+
+- Import using default imports:
+```javascript
+// Good
+import ClassName from './ClassName.js';
+
+// Bad
+import { ClassName } from './ClassName.js';
+```
+
+- Exception: Only use named imports for third-party libraries that require it:
+```javascript
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+```
+
+### Class Structure Pattern
+Each class should follow this pattern:
+```javascript
+class ClassName {
+    constructor(gameEngine) {
+        this.gameEngine = gameEngine;
+        this.initialized = false;
+        // Other initialization
+    }
+
+    initialize() {
+        if (this.initialized) return;
+        console.log('Initializing ClassName');
+        
+        // Initialization logic
+        
+        this.initialized = true;
+    }
+
+    update(deltaTime) {
+        if (!this.initialized) return;
+        // Update logic
+    }
+}
+```
+
+### Manager Class Requirements
+- All manager classes should take `gameEngine` as their constructor parameter
+- Get required references through gameEngine (e.g., `this.scene = gameEngine.scene`)
+- Include initialization tracking with `this.initialized`
+- Check initialization state in update methods
+- Implement proper cleanup in removeEntity methods
+- Use Maps for collections that need frequent lookups
+
+### Error Handling Standards
+- Check for null/undefined objects before use
+- Use proper initialization checks
+- Log meaningful error messages
+- Handle edge cases in entity interactions
+- Implement proper cleanup on entity removal
+
+### Performance Guidelines
+- Use Maps for collections that need frequent lookups
+- Check initialization state before updates
+- Use efficient data structures for spatial queries
+- Implement proper cleanup in removeEntity methods
+- Update UI elements only when necessary
+- Use requestAnimationFrame for smooth animations
 
 ## Development Guidelines
-1. **Code Structure**
-   - Keep modules decoupled
-   - Use event system for communication
-   - Document all public methods
-   - Follow consistent naming
+### Recent Updates (2024-12-07)
 
-2. **Performance**
-   - Optimize entity updates
-   - Use object pooling
-   - Limit visual effects
-   - Monitor FPS impact
+### Combat System
+- Implemented DemonStoonie combat mechanics
+  - Detection range: 15 units
+  - Attack range: 1.5 units
+  - Base damage: 20
+  - Attack cooldown: 1 second
+- Added Stoonie defensive behaviors
+  - Flee when health < 30% or when pregnant
+  - Fight back when equipped with combat-capable souls
+  - Shield system for damage reduction
 
-3. **Testing**
-   - Test new features in isolation
-   - Verify soul system integration
-   - Check power effects
-   - Validate experience gain
+### Reproduction System
+- Added pregnancy mechanics
+  - Duration: 10 seconds
+  - Visual indicator: Pink sphere above pregnant Stoonies
+  - Automatic birth process
+- Mating requirements:
+  - Different genders
+  - Neither Stoonie pregnant
+  - Both off mating cooldown (5 seconds)
+
+### Entity Management
+- New VicinityManager for handling entity interactions
+  - Manages combat encounters
+  - Controls reproduction events
+  - Updates every 500ms for performance
+- Enhanced EntityManager with proper entity spawning system
+  - Reliable entity creation and tracking
+  - Scene management integration
+  - Proper cleanup on entity removal
+
+### Soul System
+- Improved soul-stoonie connection management
+- Added combat-related soul powers:
+  - Energy Blast: Double damage
+  - Shield Bubble: Damage reduction
+  - Speed Boost: 50% faster fleeing
+
+## Known Issues
+- Soul disconnection may cause temporary console errors (handled gracefully)
+- Entities might occasionally spawn at the same location
+
+## Next Steps
+1. Add visual effects for soul powers
+2. Implement group behaviors for Stoonies
+3. Add more varied combat strategies
+4. Create a proper UI for entity stats
 
 ## Changelog
+
+### Version 0.1.4 (2024-12-07)
+- Added comprehensive soul management UI
+- Implemented selection system with multi-select
+- Added detailed soul statistics panel
+- Improved UI organization and positioning
+- Enhanced visual feedback for soul-stoonie connections
 
 ### Version 0.1.3 (2024-12-06)
 - Added complete soul system with experience and leveling

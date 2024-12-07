@@ -1,77 +1,85 @@
-# Stoonie Game
+# StoonGame
 
-A Three.js-based game where you manage a population of magical creatures called Stoonies.
+A unique game where you manage souls and their Stoonie vessels in a dynamic ecosystem. Watch as Stoonies interact, reproduce, and engage in combat with demon variants.
 
 ## Features
 
-### Core Gameplay
-- **Stoonies**: Male (red) and female (blue) creatures that wander, mate, and reproduce
-- **Demon Stoonies**: Hostile entities (purple) that chase and attack regular Stoonies
-- **Soul System**: Connect souls to Stoonies to grant them special powers and abilities
-- **Experience & Leveling**: Souls gain experience through their Stoonie's actions
+### Soul System
+- Souls can possess Stoonies and grant them special powers
+- Powers include Energy Blast, Shield Bubble, and Speed Boost
+- Experience system for soul progression
+
+### Entity Types
+1. **Stoonies**
+   - Can be male or female
+   - Can reproduce when conditions are met
+   - Show visual indicators for states (pregnancy, soul possession)
+   - Have defensive and offensive capabilities
+   - Health system with regeneration
+
+2. **Demon Stoonies**
+   - Aggressive variants that hunt normal Stoonies
+   - Enhanced speed and combat capabilities
+   - Strategic targeting system
 
 ### Game Mechanics
-- **Movement**: Natural wandering behavior with smooth physics
-- **Reproduction**: Male and female Stoonies can mate to create offspring
-- **Combat**: Demon Stoonies hunt and attack regular Stoonies
-- **Soul Powers**: Various abilities unlocked as souls level up
+- **Combat System**
+  - Demon Stoonies actively hunt regular Stoonies
+  - Stoonies can flee or fight back based on their capabilities
+  - Soul powers enhance combat abilities
+  - Visual feedback for attacks and damage
 
-### User Interface
-- **Entity Stats**: Hover over entities to see their stats
-- **Spawn Controls**: Add new Stoonies and Demons with UI buttons
-- **Debug Mode**: Hold Shift to see detailed game information
-- **Soul Management**: Track soul levels and powers
+- **Reproduction System**
+  - Gender-based mating
+  - Pregnancy duration with visual indicators
+  - Automatic birth process
+  - Cooldown period between mating attempts
+
+- **Interaction System**
+  - Vicinity-based entity interactions
+  - Automatic behavior states (wander, flee, fight)
+  - Soul power integration
+  - Group dynamics
+
+## Getting Started
+
+1. Clone the repository
+2. Open the project in your preferred IDE
+3. Start a local server (e.g., using Live Server in VS Code)
+4. Open index.html in your browser
 
 ## Controls
-- **Mouse Hover**: View entity statistics
-- **Shift Key**: Toggle debug mode
-- **UI Buttons**: 
-  - Green: Spawn new Stoonie
-  - Red: Spawn new Demon Stoonie
-
-## Soul Powers
-- **Level 2**: Speed Boost
-- **Level 3**: Healing Aura
-- **Level 5**: Shield Bubble
-- **Level 7**: Energy Blast
-- **Level 10**: Time Warp
-
-## Technical Details
-- Built with Three.js
-- Modular architecture for easy expansion
-- Entity-component system for game objects
-- Physics-based movement system
-- Event-driven interaction system
+- Left Click: Select Stoonie
+- Right Click: Move camera
+- Scroll: Zoom in/out
+- Space: Pause/Resume game
 
 ## Development
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Start local server: `npm start`
-4. Open browser at `http://localhost:3000`
 
-## Project Structure
+### Prerequisites
+- Modern web browser with WebGL support
+- Basic understanding of Three.js
+- Local development server
+
+### Project Structure
 ```
-frontend/
-  ├── js/
-  │   ├── core/
-  │   │   ├── GameEngine.js
-  │   │   ├── EntityManager.js
-  │   │   ├── WorldManager.js
-  │   │   ├── UIManager.js
-  │   │   ├── UIOverlay.js
-  │   │   ├── DebugManager.js
-  │   │   └── SoulManager.js
-  │   ├── entities/
-  │   │   ├── BaseEntity.js
-  │   │   ├── Stoonie.js
-  │   │   ├── DemonStoonie.js
-  │   │   └── StoonieSoul.js
-  │   └── main.js
-  └── index.html
+StoonGame_NEW/
+├── frontend/
+│   ├── js/
+│   │   ├── core/         # Core game systems
+│   │   ├── entities/     # Entity definitions
+│   │   └── utils/        # Utility functions
+│   ├── css/             # Styling
+│   └── index.html       # Main entry point
+└── README.md
 ```
 
 ## Contributing
-Feel free to submit issues and pull requests.
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
-MIT License - feel free to use and modify for your own projects.
+This project is licensed under the MIT License - see the LICENSE file for details.

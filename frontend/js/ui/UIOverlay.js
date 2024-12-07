@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export class UIOverlay {
+export default class UIOverlay {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
         this.setupUI();
@@ -257,15 +257,15 @@ export class UIOverlay {
     }
 
     update() {
-        if (!this.gameEngine.soulManager) {
+        if (!this.gameEngine.soulManager || !this.soulContainer) {
             return;
         }
 
         // Clear existing souls
         this.soulContainer.innerHTML = '';
         
-        // Get available souls from soul manager
-        const availableSouls = this.gameEngine.soulManager.getAvailableSouls();
+        // Get available souls directly from the availableSouls array
+        const availableSouls = [...this.gameEngine.soulManager.availableSouls];
         
         // Create and append soul elements
         availableSouls.forEach(soul => {

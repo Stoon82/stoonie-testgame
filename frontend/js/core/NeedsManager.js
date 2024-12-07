@@ -1,4 +1,4 @@
-class NeedsManager {
+export default class NeedsManager {
     constructor() {
         this.entities = new Map(); // Map of entity ID to needs data
     }
@@ -103,5 +103,3 @@ class NeedsManager {
         this.entities.delete(entityId);
     }
 }
-
-export default NeedsManager;

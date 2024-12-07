@@ -3,11 +3,24 @@ import Stoonie from '../entities/Stoonie.js';
 import DemonStoonie from '../entities/DemonStoonie.js';
 
 export class EntityManager {
-    constructor(scene, gameEngine) {
-        this.scene = scene;
+    constructor(gameEngine) {
         this.gameEngine = gameEngine;
+        this.scene = gameEngine.scene;
         this.entities = new Map();
         this.nextEntityId = 0;
+        this.initialized = false;
+    }
+
+    initialize() {
+        if (this.initialized) return;
+        console.log('Initializing EntityManager');
+
+        // Create initial entities
+        this.createStoonie({ position: { x: 0, y: 0, z: 0 } });
+        this.createStoonie({ position: { x: 2, y: 0, z: 2 } });
+        this.createStoonie({ position: { x: -2, y: 0, z: -2 } });
+
+        this.initialized = true;
     }
 
     addEntity(entity) {
@@ -15,13 +28,29 @@ export class EntityManager {
         this.scene.add(entity.getMesh());
     }
 
+    spawnEntity(type, config = {}) {
+        const id = this.nextEntityId++;
+        let entity;
+
+        switch(type) {
+            case 'Stoonie':
+                entity = new Stoonie(id, config, this.gameEngine);
+                break;
+            case 'DemonStoonie':
+                entity = new DemonStoonie(id, config, this.gameEngine);
+                break;
+            default:
+                console.error(`Unknown entity type: ${type}`);
+                return null;
+        }
+
+        this.addEntity(entity);
+        return entity;
+    }
+
     createStoonie(config = {}) {
         const stoonie = new Stoonie(this.nextEntityId++, config, this.gameEngine);
         this.addEntity(stoonie);
-        
-        // Try to connect a soul if available
-        this.gameEngine.soulManager.connectSoulToStoonie(stoonie);
-        
         return stoonie;
     }
 
@@ -32,28 +61,62 @@ export class EntityManager {
     }
 
     removeEntity(entity) {
-        this.scene.remove(entity.getMesh());
-        this.entities.delete(entity.id);
+        if (this.entities.has(entity.id)) {
+            this.scene.remove(entity.getMesh());
+            this.entities.delete(entity.id);
+        }
+    }
+
+    getEntityById(id) {
+        return this.entities.get(id);
     }
 
     update(deltaTime) {
-        // Update all entities
+        if (!this.initialized) return;
+
         this.entities.forEach(entity => {
-            entity.update(deltaTime);
-            
-            // Check for dead entities
-            if (entity.isDead()) {
-                if (entity instanceof Stoonie && entity.soul) {
-                    // Disconnect soul before removing entity
-                    this.gameEngine.soulManager.disconnectSoulFromStoonie(entity);
-                }
-                this.removeEntity(entity);
+            if (entity && entity.update) {
+                entity.update(deltaTime);
             }
         });
     }
 
+    getEntitiesInRadius(position, radius, type = null) {
+        const entitiesInRadius = [];
+        
+        this.entities.forEach(entity => {
+            if (!type || entity.constructor.name === type) {
+                const distance = position.distanceTo(entity.position);
+                if (distance <= radius) {
+                    entitiesInRadius.push(entity);
+                }
+            }
+        });
+        
+        return entitiesInRadius;
+    }
+
+    getClosestEntity(position, type = null, maxDistance = Infinity) {
+        let closest = null;
+        let closestDistance = maxDistance;
+        
+        this.entities.forEach(entity => {
+            if (!type || entity.constructor.name === type) {
+                const distance = position.distanceTo(entity.position);
+                if (distance < closestDistance) {
+                    closest = entity;
+                    closestDistance = distance;
+                }
+            }
+        });
+        
+        return closest;
+    }
+
     getHoveredStoonie(mouseEvent) {
-        // Convert mouse coordinates to normalized device coordinates (-1 to +1)
+        if (!this.gameEngine.raycaster || !this.gameEngine.camera) return null;
+
+        // Calculate normalized device coordinates
         const rect = this.gameEngine.renderer.domElement.getBoundingClientRect();
         const x = ((mouseEvent.clientX - rect.left) / rect.width) * 2 - 1;
         const y = -((mouseEvent.clientY - rect.top) / rect.height) * 2 + 1;
@@ -80,3 +143,5 @@ export class EntityManager {
         return null;
     }
 }
+
+export default EntityManager;

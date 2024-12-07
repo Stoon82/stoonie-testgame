@@ -1,5 +1,13 @@
 import GameEngine from './core/GameEngine.js';
 
-// Initialize and start the game
-const game = new GameEngine();
-game.start();
+async function startGame() {
+    try {
+        const gameEngine = new GameEngine();
+        await gameEngine.initialize();
+        console.log('Game started successfully');
+    } catch (error) {
+        console.error('Failed to start game:', error);
+    }
+}
+
+window.addEventListener('load', startGame);

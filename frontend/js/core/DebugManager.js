@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export class DebugManager {
+export default class DebugManager {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
         this.isActive = false;
