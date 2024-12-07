@@ -201,23 +201,19 @@ export default class WorldManager {
         canvas.height = 1024;
         const ctx = canvas.getContext('2d');
         
-        // Create gradient
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, '#8B4513');  // Saddle Brown
-        gradient.addColorStop(0.5, '#556B2F'); // Dark Olive Green
-        gradient.addColorStop(1, '#228B22');   // Forest Green
-        
-        ctx.fillStyle = gradient;
+        // Set white background
+        ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Add noise to texture
-        for (let i = 0; i < 50000; i++) {
+        // Draw random circles
+        for (let i = 0; i < 500; i++) {
             const x = Math.random() * canvas.width;
             const y = Math.random() * canvas.height;
-            const radius = Math.random() * 2;
+            const radius = Math.random() * 20 + 5;
+            
             ctx.beginPath();
             ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.1})`;
+            ctx.fillStyle = `rgba(0, 100, 0, ${Math.random() * 0.3})`; // Semi-transparent green
             ctx.fill();
         }
         
