@@ -5,13 +5,14 @@ export default class InitManager {
         this.initOrder = [
             'worldManager',
             'entityManager',
-            'soulManager',
-            'uiManager',
-            'debugManager',
-            'uiOverlay',
             'needsManager',
+            'jobManager',
+            'soulManager',
             'vicinityManager',
             'selectionManager',
+            'mapEditManager',
+            'uiManager',
+            'debugManager',
             'inputManager'
         ];
         this.initialized = false;

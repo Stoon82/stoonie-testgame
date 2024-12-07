@@ -17,9 +17,19 @@
 - Handles entity lifecycle and interactions
 
 ### WorldManager.js
-- Manages environmental objects
-- Handles world generation and terrain management
-- **New**: Generates terrain mesh using a heightmap and applies textures with colored circles on a white background
+- Manages environmental objects and terrain
+- Handles world generation and updates
+- Creates terrain mesh with proper vertex handling
+- Generates terrain textures with gradients and noise
+- Supports terrain modification tools (raise, lower, smooth)
+- Maintains terrain geometry and material properties
+
+### MapEditManager.js
+- Handles terrain modification operations
+- Implements height adjustment tools
+- Provides smooth terrain transitions
+- Manages coordinate transformations
+- Updates terrain geometry efficiently
 
 ### SelectionManager.js
 - Provides a unified selection system for game objects
@@ -56,3 +66,4 @@
 - Combat System: Enhanced combat capabilities with soul powers
 - Reproduction System: Gender-based mating and pregnancy indicators
 - Interaction System: Vicinity-based interactions and group dynamics
+- Terrain System: Dynamic terrain modification with height variations

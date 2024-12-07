@@ -153,44 +153,108 @@ export default class WorldManager {
         }
     }
 
+    modifyHeight(point, radius, strength) {
+        if (!this.terrain) return;
+
+        const geometry = this.terrain.geometry;
+        const positions = geometry.attributes.position.array;
+        const vertices = geometry.attributes.position.count;
+
+        // Convert world point to local terrain space
+        const localPoint = new THREE.Vector3();
+        localPoint.copy(point);
+        localPoint.applyMatrix4(this.terrain.matrixWorld.invert());
+
+        // Iterate through all vertices
+        for (let i = 0; i < vertices; i++) {
+            const x = positions[i * 3];
+            const y = positions[i * 3 + 1];
+            const z = positions[i * 3 + 2];
+
+            // Calculate distance to modification point
+            const dx = x - localPoint.x;
+            const dy = y - localPoint.z; // Note: y in local space is z in world space due to rotation
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Apply height modification based on distance
+            if (distance < radius) {
+                const falloff = 1 - (distance / radius);
+                positions[i * 3 + 2] += strength * falloff;
+            }
+        }
+
+        // Update the geometry
+        geometry.attributes.position.needsUpdate = true;
+        geometry.computeVertexNormals();
+    }
+
     createTerrain() {
         const size = 100;
-        const segments = 50;
+        const segments = 100;
+        
+        // Create geometry
         const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
-
-        // Generate heightmap
-        const positionAttribute = geometry.attributes.position;
-        for (let i = 0; i < positionAttribute.count; i++) {
-            const zIndex = i * 3 + 2; // The Z component is the third in the array
-            positionAttribute.array[zIndex] = Math.random() * 5; // Random height
-        }
-
-        geometry.computeVertexNormals();
-
-        // Create texture
+        
+        // Generate texture
         const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = 512;
-        const context = canvas.getContext('2d');
-
-        // Set white background
-        context.fillStyle = 'white';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw circles
-        for (let i = 0; i < 100; i++) {
-            context.beginPath();
-            context.arc(Math.random() * 512, Math.random() * 512, Math.random() * 20 + 10, 0, Math.PI * 2);
-            context.fillStyle = `hsl(${Math.random() * 360}, 50%, 50%)`;
-            context.fill();
+        canvas.width = 1024;
+        canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+        
+        // Create gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#8B4513');  // Saddle Brown
+        gradient.addColorStop(0.5, '#556B2F'); // Dark Olive Green
+        gradient.addColorStop(1, '#228B22');   // Forest Green
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Add noise to texture
+        for (let i = 0; i < 50000; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = Math.random() * 2;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.1})`;
+            ctx.fill();
         }
-
+        
+        // Create texture
         const texture = new THREE.CanvasTexture(canvas);
-
-        const material = new THREE.MeshStandardMaterial({ map: texture });
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(4, 4);
+        
+        // Create material
+        const material = new THREE.MeshPhongMaterial({
+            map: texture,
+            side: THREE.DoubleSide,
+            wireframe: false
+        });
+        
+        // Create mesh
         this.terrain = new THREE.Mesh(geometry, material);
-        this.terrain.rotation.x = -Math.PI / 2;
+        this.terrain.rotation.x = -Math.PI / 2; // Rotate to be horizontal
         this.terrain.receiveShadow = true;
+        
+        // Add some initial height variations
+        const vertices = this.terrain.geometry.attributes.position.array;
+        for (let i = 0; i < vertices.length; i += 3) {
+            vertices[i + 2] = Math.random() * 2; // Small random height variations
+        }
+        
+        this.terrain.geometry.computeVertexNormals();
+        this.terrain.geometry.attributes.position.needsUpdate = true;
+        
         this.scene.add(this.terrain);
+    }
+
+    updateTerrainGeometry() {
+        if (this.terrain) {
+            this.terrain.geometry.computeVertexNormals();
+            this.terrain.geometry.attributes.position.needsUpdate = true;
+        }
     }
 
     getTerrainHeight(x, z) {

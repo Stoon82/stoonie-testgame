@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import UIOverlay from '../ui/UIOverlay.js';
 import DetailsPanel from '../ui/details_panel.js';
 import StatsOverlay from '../ui/stats_overlay.js';
+import MapEditOverlay from '../ui/map_edit_overlay.js';
 
 export default class UIManager {
     constructor(gameEngine) {
@@ -12,10 +13,12 @@ export default class UIManager {
         this.leftPanel = null;
         this.detailsPanel = null;
         this.statsOverlay = null;
+        this.mapEditOverlay = null;
         this.hoveredEntity = null;
         this.panels = {};
         this.draggedSoul = null;
         this.mousePosition = { x: 0, y: 0 };
+        this.isMapEditMode = false;
     }
 
     initialize() {
@@ -63,6 +66,12 @@ export default class UIManager {
             height: fit-content;
         `;
         document.body.appendChild(this.overlay);
+
+        // Create map edit overlay
+        this.mapEditOverlay = new MapEditOverlay(this.gameEngine);
+        this.mapEditOverlay.initialize();
+
+        this.setupUI();
 
         const buttonStyle = `
             padding: 8px 16px;
@@ -141,6 +150,38 @@ export default class UIManager {
         this.detailsPanel = new DetailsPanel(this.overlay);
 
         this.initialized = true;
+    }
+
+    setupUI() {
+        const buttonStyle = `
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        `;
+
+        // Map Edit Mode Toggle Button
+        const mapEditBtn = document.createElement('button');
+        mapEditBtn.textContent = 'Map Edit: OFF';
+        mapEditBtn.style.cssText = buttonStyle + 'background: #666666;';
+        mapEditBtn.addEventListener('mouseover', () => mapEditBtn.style.background = '#444444');
+        mapEditBtn.addEventListener('mouseout', () => mapEditBtn.style.background = this.isMapEditMode ? '#444444' : '#666666');
+        mapEditBtn.addEventListener('click', () => this.toggleMapEditMode());
+        this.overlay.appendChild(mapEditBtn);
+    }
+
+    toggleMapEditMode() {
+        this.isMapEditMode = !this.isMapEditMode;
+        this.gameEngine.mapEditManager.toggleEditMode();
+        
+        if (this.isMapEditMode) {
+            this.mapEditOverlay.show();
+        } else {
+            this.mapEditOverlay.hide();
+        }
     }
 
     adjustColor(color, percent) {

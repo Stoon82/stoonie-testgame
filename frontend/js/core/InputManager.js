@@ -175,6 +175,12 @@ export default class InputManager {
             return;
         }
 
+        // Handle map editing
+        if (this.gameEngine.mapEditManager.isActive) {
+            this.gameEngine.mapEditManager.modifyTerrain(this.normalizedMousePosition, this.isMouseDown);
+            return;
+        }
+
         if (this.isMouseDown) {
             const camera = this.gameEngine.camera;
             if (!camera) return;
@@ -272,7 +278,7 @@ export default class InputManager {
         }
 
         // Check if we're in building placement mode
-        if (this.gameEngine.uiOverlay.buildingPlacementMode) {
+        if (this.gameEngine.uiManager.overlay && this.gameEngine.uiManager.overlay.buildingPlacementMode) {
             // Get the ground point where we clicked
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(this.normalizedMousePosition, this.gameEngine.camera);
@@ -284,14 +290,14 @@ export default class InputManager {
 
             if (intersectionPoint) {
                 // Create the building at the intersection point
-                const buildingType = this.gameEngine.uiOverlay.buildingPlacementMode;
+                const buildingType = this.gameEngine.uiManager.overlay.buildingPlacementMode;
                 this.gameEngine.entityManager.createBuilding({
                     type: buildingType,
                     position: intersectionPoint
                 });
 
                 // Exit building placement mode
-                this.gameEngine.uiOverlay.buildingPlacementMode = null;
+                this.gameEngine.uiManager.overlay.buildingPlacementMode = null;
                 document.body.style.cursor = 'default';
             }
             return;

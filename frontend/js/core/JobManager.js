@@ -1,8 +1,9 @@
-class JobManager {
+export default class JobManager {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
         this.jobs = new Map(); // stoonieId -> job
         this.resources = new Map(); // resourceId -> amount
+        this.initialized = false;
         
         // Job definitions with their requirements and rewards
         this.jobTypes = {
@@ -15,6 +16,13 @@ class JobManager {
             }
             // Add more job types here
         };
+    }
+
+    async initialize() {
+        if (this.initialized) return;
+        
+        console.log('Initializing JobManager');
+        this.initialized = true;
     }
 
     assignJob(stoonie, jobType, target) {
@@ -139,5 +147,3 @@ class JobManager {
         animate();
     }
 }
-
-export default JobManager;

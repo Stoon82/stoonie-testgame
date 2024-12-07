@@ -3,6 +3,8 @@
 ## Current Bugs 🐛
 
 ### Critical
+- [x] Terrain mesh appearing incorrectly (fixed)
+- [x] Terrain texture not applying properly (fixed)
 - [ ] Camera controls not working (orbit, zoom, pan)
 - [ ] UI elements overlap and scaling issues
 - [ ] Selection system sometimes fails to clear properly
@@ -26,6 +28,13 @@
 ## Roadmap 🗺️
 
 ### Phase 1: Core Mechanics (In Progress)
+- [x] **Terrain System**
+  - Fixed terrain mesh appearance
+  - Implemented proper texture generation
+  - Added terrain modification tools
+  - Improved height variations
+  - Enhanced coordinate handling
+
 - [ ] **Camera System**
   - Restore orbit controls
   - Add zoom limits

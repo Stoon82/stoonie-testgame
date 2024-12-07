@@ -24,12 +24,26 @@
 - **WorldManager.js**
   - Environmental object management
   - World generation and updates
-  - Terrain and obstacle placement
+  - Terrain mesh creation and management
+  - Texture generation with gradients and noise
+  - Terrain geometry and material handling
   - Resource management
-  - **New**: Generates terrain mesh using a heightmap and applies textures with colored circles on a white background
-  - **Terrain System**: Utilizes Perlin noise for natural terrain generation
-  - **Texture Creation**: Employs a custom shader to create detailed textures with varied colors and patterns
-  - **Terrain Features**: Includes hills, valleys, and plateaus for diverse environments
+  - **Terrain System**:
+    - Creates terrain mesh with proper vertex handling
+    - Generates textures with natural gradients and noise
+    - Supports dynamic height modifications
+    - Maintains proper geometry updates
+    - Handles texture wrapping and material properties
+
+- **MapEditManager.js**
+  - Terrain modification tools:
+    - Raise/Lower terrain with smooth transitions
+    - Terrain smoothing with local averaging
+    - Proper coordinate transformations
+    - Efficient geometry updates
+  - Mouse interaction handling for terrain edits
+  - Edit radius and strength control
+  - Falloff calculations for smooth transitions
 
 - **SelectionManager.js**
   - Unified selection system for all game objects

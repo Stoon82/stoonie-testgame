@@ -6,11 +6,12 @@ import EntityManager from './EntityManager.js';
 import SoulManager from './SoulManager.js';
 import UIManager from './UIManager.js';
 import DebugManager from './DebugManager.js';
-import UIOverlay from '../ui/UIOverlay.js';
 import NeedsManager from './NeedsManager.js';
 import VicinityManager from './VicinityManager.js';
 import SelectionManager from './SelectionManager.js';
 import InputManager from './InputManager.js';
+import JobManager from './JobManager.js';
+import MapEditManager from './MapEditManager.js';
 
 /**
  * The main GameEngine class that manages the game's core functionality.
@@ -19,48 +20,73 @@ export default class GameEngine {
     /**
      * Creates a new instance of the GameEngine class.
      */
-    constructor() {
+    constructor(canvas) {
+        if (!canvas) {
+            throw new Error('Canvas is required for GameEngine initialization');
+        }
+        
+        this.canvas = canvas;
         this.scene = new THREE.Scene();
         this.camera = null;
-        this.renderer = null;
+        this.renderer = new THREE.WebGLRenderer({ 
+            canvas: this.canvas, 
+            antialias: true 
+        });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.shadowMap.enabled = true;
+        
         this.clock = new THREE.Clock();
         this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
         this.age = 0;
         
         // Initialize all managers
         this.initManager = new InitManager(this);
         this.worldManager = new WorldManager(this);
         this.entityManager = new EntityManager(this);
-        this.soulManager = new SoulManager(this);
-        this.uiManager = new UIManager(this);
-        this.debugManager = new DebugManager(this);
-        this.uiOverlay = new UIOverlay(this);
         this.needsManager = new NeedsManager(this);
+        this.soulManager = new SoulManager(this);
+        this.jobManager = new JobManager(this);
         this.vicinityManager = new VicinityManager(this);
-        this.selectionManager = new SelectionManager(this);
+        this.debugManager = new DebugManager(this);
+        this.uiManager = new UIManager(this);
         this.inputManager = new InputManager(this);
+        this.selectionManager = new SelectionManager(this);
+        this.mapEditManager = new MapEditManager(this);
         
         this.selectedEntity = null;
         this.isInitialized = false;
+        this.isMapEditMode = false;
+        this.isMouseDown = false;
 
         // Register managers with InitManager
         this.initManager.registerManager('worldManager', this.worldManager);
         this.initManager.registerManager('entityManager', this.entityManager);
-        this.initManager.registerManager('soulManager', this.soulManager);
-        this.initManager.registerManager('uiManager', this.uiManager);
-        this.initManager.registerManager('debugManager', this.debugManager);
-        this.initManager.registerManager('uiOverlay', this.uiOverlay);
         this.initManager.registerManager('needsManager', this.needsManager);
+        this.initManager.registerManager('soulManager', this.soulManager);
+        this.initManager.registerManager('jobManager', this.jobManager);
         this.initManager.registerManager('vicinityManager', this.vicinityManager);
-        this.initManager.registerManager('selectionManager', this.selectionManager);
+        this.initManager.registerManager('debugManager', this.debugManager);
+        this.initManager.registerManager('uiManager', this.uiManager);
         this.initManager.registerManager('inputManager', this.inputManager);
+        this.initManager.registerManager('selectionManager', this.selectionManager);
+        this.initManager.registerManager('mapEditManager', this.mapEditManager);
 
         // Bind methods
         this.update = this.update.bind(this);
         this.handleResize = this.handleResize.bind(this);
+        this.handleMouseDown = this.handleMouseDown.bind(this);
+        this.handleMouseUp = this.handleMouseUp.bind(this);
+        this.handleMouseMove = this.handleMouseMove.bind(this);
 
         // Add window resize listener
         window.addEventListener('resize', this.handleResize);
+
+        // Add mouse event listeners
+        this.canvas.addEventListener('mousedown', this.handleMouseDown);
+        this.canvas.addEventListener('mouseup', this.handleMouseUp);
+        this.canvas.addEventListener('mousemove', this.handleMouseMove);
     }
 
     cleanup() {
@@ -95,10 +121,8 @@ export default class GameEngine {
      * Sets up the renderer for the game.
      */
     setupRenderer() {
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.shadowMap.enabled = true;
         document.body.appendChild(this.renderer.domElement);
 
         // Set canvas style
@@ -224,28 +248,22 @@ export default class GameEngine {
         if (!this.isInitialized) return;
 
         const deltaTime = this.clock.getDelta();
-        this.age += deltaTime;
-
-        // Update controls if they exist
-        if (this.controls) {
-            this.controls.update();
-            if (this.controls.hasChanged) {
-                console.log('Camera updated:', {
-                    position: this.camera.position,
-                    rotation: this.camera.rotation,
-                    target: this.controls.target
-                });
-            }
-        }
 
         // Update all managers
-        this.inputManager.update(deltaTime);
         this.worldManager.update(deltaTime);
         this.entityManager.update(deltaTime);
         this.needsManager.update(deltaTime);
+        this.jobManager.update(deltaTime);
+        this.soulManager.update(deltaTime);
         this.vicinityManager.update(deltaTime);
+        this.selectionManager.update(deltaTime);
         this.uiManager.update(deltaTime);
         this.debugManager.update(deltaTime);
+
+        // Update map edit range indicator if in edit mode
+        if (this.mapEditManager.isActive) {
+            this.mapEditManager.updateRangeIndicator(this.inputManager.getNormalizedMousePosition());
+        }
 
         // Render the scene
         if (this.renderer && this.camera) {
@@ -262,5 +280,54 @@ export default class GameEngine {
      */
     selectEntity(entity) {
         this.selectedEntity = entity;
+    }
+
+    setMapEditMode(enabled) {
+        this.isMapEditMode = enabled;
+    }
+
+    handleMouseDown(event) {
+        event.preventDefault();
+        this.isMouseDown = true;
+        if (this.isMapEditMode) {
+            this.editTerrainAtMouse(event);
+        }
+    }
+
+    handleMouseUp(event) {
+        event.preventDefault();
+        this.isMouseDown = false;
+    }
+
+    handleMouseMove(event) {
+        event.preventDefault();
+        if (this.isMapEditMode && this.isMouseDown) {
+            this.editTerrainAtMouse(event);
+        }
+    }
+
+    editTerrainAtMouse(event) {
+        // Calculate mouse position
+        const rect = this.canvas.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        // Update the picking ray with the camera and mouse position
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+
+        // Check for intersection with the terrain
+        const terrain = this.worldManager.terrain;
+        if (!terrain) return;
+
+        const intersects = this.raycaster.intersectObject(terrain);
+        
+        if (intersects.length > 0) {
+            const point = intersects[0].point;
+            const isReducing = event.ctrlKey;
+            const radius = 5; // Radius of effect in world units
+            const strength = isReducing ? -0.2 : 0.2; // Height adjustment per frame
+            
+            this.worldManager.modifyHeight(point, radius, strength);
+        }
     }
 }
