@@ -18,6 +18,11 @@ export default class BaseEntity {
         this.energy = 100;
         this.age = 0;
 
+        // Damage properties
+        this.lastDamageTime = 0;
+        this.damageCooldown = 0.5; // Half second between damage instances
+        this._isDead = false;
+
         // Damage indicator properties
         this.damageIndicators = [];
         this.damageIndicatorLifetime = 5.0; // Increased to 5 seconds
@@ -59,14 +64,22 @@ export default class BaseEntity {
         this.velocity.multiplyScalar(0.95);
         this.acceleration.multiplyScalar(0);
 
-        // Update damage indicators
-        if (this.damageIndicators && this.damageIndicators.length > 0) {
-            console.log(`Updating ${this.damageIndicators.length} damage indicators for ${this.constructor.name} #${this.id}`);
-            this.updateDamageIndicators(deltaTime);
-        }
-
-        // Update basic properties
         this.age += deltaTime;
+        
+        // Update damage indicators
+        this.updateDamageIndicators(deltaTime);
+
+        // Check for death
+        if (this.isDead() && !this._isDead) {
+            this._isDead = true;
+            console.log(`${this.constructor.name} #${this.id} has died`);
+            // Remove from scene after a short delay to show death effects
+            setTimeout(() => {
+                if (this.gameEngine && this.gameEngine.entityManager) {
+                    this.gameEngine.entityManager.removeEntity(this);
+                }
+            }, 1000);
+        }
     }
 
     createMesh() {
@@ -230,10 +243,20 @@ export default class BaseEntity {
     }
 
     damage(amount) {
+        // Check if entity is already dead
+        if (this._isDead) return;
+
+        // Check damage cooldown
+        if (this.age - this.lastDamageTime < this.damageCooldown) {
+            return;
+        }
+
         if (typeof amount !== 'number' || amount < 0) {
             console.warn(`Invalid damage amount: ${amount}`);
             return;
         }
+
+        this.lastDamageTime = this.age;
         this.health = Math.max(0, this.health - amount);
         console.log(`${this.constructor.name} #${this.id} took ${amount.toFixed(1)} damage. Health: ${this.health.toFixed(1)}`);
         

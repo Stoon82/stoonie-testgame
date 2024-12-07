@@ -138,11 +138,9 @@ export default class DemonStoonie extends BaseEntity {
                 
                 console.log(`Demon ${this.id}: Attacking Stoonie ${stoonie.id} at distance ${distance.toFixed(1)} with ${actualDamage.toFixed(1)} damage`);
                 
-                // Apply damage directly and create indicator
-                stoonie.health -= actualDamage;
-                stoonie.createDamageIndicator(actualDamage);
+                // Use proper damage method instead of direct health modification
+                stoonie.damage(actualDamage);
                 
-                console.log(`Demon ${this.id}: Stoonie ${stoonie.id} health now: ${stoonie.health.toFixed(1)}`);
                 attackedAny = true;
                 attackCount++;
             }

@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export default class SelectionManager {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
@@ -73,25 +75,24 @@ export default class SelectionManager {
     }
 
     createSelectionRing(entity) {
-        if (!entity || !entity.position) return;
-
-        // Create a ring geometry
-        const geometry = new THREE.RingGeometry(0.7, 0.8, 32);
+        const radius = entity.getMesh().geometry.boundingSphere?.radius || 1;
+        const geometry = new THREE.RingGeometry(radius * 1.2, radius * 1.3, 32);
         const material = new THREE.MeshBasicMaterial({
             color: 0x00ff00,
+            side: THREE.DoubleSide,
             transparent: true,
-            opacity: 0.5,
-            side: THREE.DoubleSide
+            opacity: 0.5
         });
+        
         const ring = new THREE.Mesh(geometry, material);
-
-        // Position the ring
-        ring.position.copy(entity.position);
-        ring.position.y = 0.1; // Slightly above ground
         ring.rotation.x = -Math.PI / 2; // Lay flat
-
-        this.selectionRings.set(entity.id, ring);
+        ring.position.copy(entity.position);
+        ring.position.y += 0.1; // Slightly above ground to prevent z-fighting
+        
         this.gameEngine.scene.add(ring);
+        this.selectionRings.set(entity.id, ring);
+        
+        return ring;
     }
 
     removeSelectionRing(entityId) {
