@@ -22,7 +22,8 @@ export default class InputManager {
         this.cameraDistance = 15;
         this.minCameraDistance = 5;
         this.maxCameraDistance = 30;
-        this.panSpeed = 0.01;
+        this.panSpeed = 1.0;
+        this.rotateSpeed = 0.1;
         
         // Keyboard state
         this.keysPressed = new Set();
@@ -98,35 +99,6 @@ export default class InputManager {
         } else {
             this.gameEngine.uiManager.clearHoveredEntity();
         }
-
-        // Update drag state if mouse is down
-        if (this.isMouseDown && this.mouseButton === 2) {
-            const deltaX = this.lastClientX - this.lastDragPosition.x;
-            const deltaY = this.lastClientY - this.lastDragPosition.y;
-
-            if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-                this.isDragging = true;
-            }
-
-            if (this.isDragging) {
-                const camera = this.gameEngine.camera;
-                if (camera) {
-                    const panX = -deltaX * this.panSpeed * camera.position.y;
-                    const panZ = deltaY * this.panSpeed * camera.position.y;
-
-                    camera.position.x += panX;
-                    camera.position.z += panZ;
-                    this.cameraTarget.x += panX;
-                    this.cameraTarget.z += panZ;
-                    camera.lookAt(this.cameraTarget);
-                }
-            }
-
-            this.lastDragPosition = { 
-                x: this.lastClientX, 
-                y: this.lastClientY 
-            };
-        }
     }
 
     updateMousePosition() {
@@ -153,10 +125,12 @@ export default class InputManager {
     }
 
     onMouseDown(event) {
-        // Skip if clicking on UI elements
-        if (event.target.closest('#ui-overlay') || 
-            event.target.closest('#stats-overlay') || 
-            event.target.closest('#souls-panel')) {
+        // Skip if over UI elements
+        if (event.target instanceof HTMLElement && 
+            (event.target.id === 'ui-overlay' || 
+             event.target.id === 'stats-overlay' || 
+             event.target.id === 'souls-panel' ||
+             event.target.id === 'debug-overlay')) {
             return;
         }
 
@@ -177,6 +151,11 @@ export default class InputManager {
                 this.gameEngine.selectionManager.clearSelection();
             }
         }
+
+        // Let right-click events pass through to OrbitControls
+        if (event.button === 2) {
+            return;
+        }
     }
 
     onMouseMove(event) {
@@ -186,27 +165,28 @@ export default class InputManager {
         this.updateMousePosition();
 
         // Skip further processing if over UI elements
-        if (event.target.closest('#ui-overlay') || 
-            event.target.closest('#stats-overlay') || 
-            event.target.closest('#souls-panel') ||
-            event.target.closest('#debug-overlay')) {
+        if (event.target instanceof HTMLElement && 
+            (event.target.id === 'ui-overlay' || 
+             event.target.id === 'stats-overlay' || 
+             event.target.id === 'souls-panel' ||
+             event.target.id === 'debug-overlay')) {
             return;
         }
 
-        // Handle map dragging with right mouse button
+        // Let right-click drag events pass through to OrbitControls
         if (this.isMouseDown && this.mouseButton === 2) {
-            const deltaX = event.clientX - this.lastDragPosition.x;
-            const deltaY = event.clientY - this.lastDragPosition.y;
-
-            if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-                this.isDragging = true;
-            }
-
-            this.lastDragPosition = { x: event.clientX, y: event.clientY };
+            return;
         }
     }
 
     onMouseUp(event) {
+        // Let right-click events pass through to OrbitControls
+        if (event.button === 2) {
+            this.isMouseDown = false;
+            this.mouseButton = null;
+            return;
+        }
+
         this.isMouseDown = false;
         this.mouseButton = null;
         this.isDragging = false;
@@ -215,30 +195,165 @@ export default class InputManager {
     }
 
     onClick(event) {
-        // Handle click events that aren't part of a drag
-        if (!this.isDragging) {
-            // Click handling is done in mousedown for immediate response
+        // Skip if clicking on UI elements
+        if (event.target.closest('#ui-overlay') || 
+            event.target.closest('#stats-overlay') || 
+            event.target.closest('#souls-panel')) {
+            return;
         }
     }
 
     onKeyDown(event) {
-        this.keysPressed.add(event.code);
-        this.updateModifierKeys(event);
+        this.keysPressed.add(event.key);
+        this.modifierKeys.ctrl = event.ctrlKey;
+        this.modifierKeys.shift = event.shiftKey;
+        this.modifierKeys.alt = event.altKey;
 
-        // Start debug mode when shift is pressed
-        if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
-            this.gameEngine.debugManager.activate();
+        // Only handle camera controls if we have access to controls
+        if (!this.gameEngine.controls) return;
+
+        const camera = this.gameEngine.camera;
+        if (!camera) return;
+
+        // Calculate movement vectors
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+        const moveAmount = this.panSpeed;
+
+        // Pan with arrow keys (no modifier)
+        if (!event.ctrlKey) {
+            switch(event.key) {
+                case 'ArrowLeft':
+                    camera.position.addScaledVector(right, -moveAmount);
+                    this.gameEngine.controls.target.addScaledVector(right, -moveAmount);
+                    console.log('Camera panning left');
+                    break;
+                case 'ArrowRight':
+                    camera.position.addScaledVector(right, moveAmount);
+                    this.gameEngine.controls.target.addScaledVector(right, moveAmount);
+                    console.log('Camera panning right');
+                    break;
+                case 'ArrowUp':
+                    camera.position.addScaledVector(forward, moveAmount);
+                    this.gameEngine.controls.target.addScaledVector(forward, moveAmount);
+                    console.log('Camera panning forward');
+                    break;
+                case 'ArrowDown':
+                    camera.position.addScaledVector(forward, -moveAmount);
+                    this.gameEngine.controls.target.addScaledVector(forward, -moveAmount);
+                    console.log('Camera panning backward');
+                    break;
+            }
         }
+        // Rotate with Ctrl + arrow keys
+        else {
+            const rotateAmount = this.rotateSpeed;
+            const controls = this.gameEngine.controls;
+            
+            switch(event.key) {
+                case 'ArrowLeft':
+                    // Rotate camera position around target point
+                    const targetLeft = controls.target;
+                    const radiusLeft = camera.position.distanceTo(targetLeft);
+                    const currentAngleLeft = Math.atan2(
+                        camera.position.x - targetLeft.x,
+                        camera.position.z - targetLeft.z
+                    );
+                    const newAngleLeft = currentAngleLeft + rotateAmount;
+                    
+                    camera.position.x = targetLeft.x + radiusLeft * Math.sin(newAngleLeft);
+                    camera.position.z = targetLeft.z + radiusLeft * Math.cos(newAngleLeft);
+                    camera.lookAt(targetLeft);
+                    console.log('Camera rotating left');
+                    break;
+                    
+                case 'ArrowRight':
+                    // Rotate camera position around target point
+                    const targetRight = controls.target;
+                    const radiusRight = camera.position.distanceTo(targetRight);
+                    const currentAngleRight = Math.atan2(
+                        camera.position.x - targetRight.x,
+                        camera.position.z - targetRight.z
+                    );
+                    const newAngleRight = currentAngleRight - rotateAmount;
+                    
+                    camera.position.x = targetRight.x + radiusRight * Math.sin(newAngleRight);
+                    camera.position.z = targetRight.z + radiusRight * Math.cos(newAngleRight);
+                    camera.lookAt(targetRight);
+                    console.log('Camera rotating right');
+                    break;
+                    
+                case 'ArrowUp':
+                    // Rotate camera up around target point
+                    const targetUp = controls.target;
+                    const radiusUp = camera.position.distanceTo(targetUp);
+                    const heightUp = camera.position.y - targetUp.y;
+                    const groundDistanceUp = Math.sqrt(
+                        Math.pow(camera.position.x - targetUp.x, 2) +
+                        Math.pow(camera.position.z - targetUp.z, 2)
+                    );
+                    
+                    // Calculate new height and ground distance
+                    const angle = Math.atan2(heightUp, groundDistanceUp);
+                    const newAngleUp = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, angle + rotateAmount));
+                    const newHeightUp = radiusUp * Math.sin(newAngleUp);
+                    const newGroundDistanceUp = radiusUp * Math.cos(newAngleUp);
+                    
+                    // Update camera position
+                    const directionUp = new THREE.Vector3(
+                        camera.position.x - targetUp.x,
+                        0,
+                        camera.position.z - targetUp.z
+                    ).normalize();
+                    
+                    camera.position.x = targetUp.x + directionUp.x * newGroundDistanceUp;
+                    camera.position.y = targetUp.y + newHeightUp;
+                    camera.position.z = targetUp.z + directionUp.z * newGroundDistanceUp;
+                    camera.lookAt(targetUp);
+                    console.log('Camera rotating up');
+                    break;
+                    
+                case 'ArrowDown':
+                    // Rotate camera down around target point
+                    const targetDown = controls.target;
+                    const radiusDown = camera.position.distanceTo(targetDown);
+                    const heightDown = camera.position.y - targetDown.y;
+                    const groundDistanceDown = Math.sqrt(
+                        Math.pow(camera.position.x - targetDown.x, 2) +
+                        Math.pow(camera.position.z - targetDown.z, 2)
+                    );
+                    
+                    // Calculate new height and ground distance
+                    const angleDown = Math.atan2(heightDown, groundDistanceDown);
+                    const newAngleDown = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, angleDown - rotateAmount));
+                    const newHeightDown = radiusDown * Math.sin(newAngleDown);
+                    const newGroundDistanceDown = radiusDown * Math.cos(newAngleDown);
+                    
+                    // Update camera position
+                    const directionDown = new THREE.Vector3(
+                        camera.position.x - targetDown.x,
+                        0,
+                        camera.position.z - targetDown.z
+                    ).normalize();
+                    
+                    camera.position.x = targetDown.x + directionDown.x * newGroundDistanceDown;
+                    camera.position.y = targetDown.y + newHeightDown;
+                    camera.position.z = targetDown.z + directionDown.z * newGroundDistanceDown;
+                    camera.lookAt(targetDown);
+                    console.log('Camera rotating down');
+                    break;
+            }
+        }
+
+        // Update controls
+        this.gameEngine.controls.update();
     }
 
     onKeyUp(event) {
-        this.keysPressed.delete(event.code);
-        this.updateModifierKeys(event);
-
-        // End debug mode when shift is released
-        if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
-            this.gameEngine.debugManager.endDebugMode();
-        }
+        this.keysPressed.delete(event.key);
+        this.modifierKeys.ctrl = event.ctrlKey;
+        this.modifierKeys.shift = event.shiftKey;
+        this.modifierKeys.alt = event.altKey;
     }
 
     onWheel(event) {
@@ -249,30 +364,15 @@ export default class InputManager {
             return;
         }
 
-        // Prevent default zoom behavior
-        event.preventDefault();
-
-        // Handle camera zoom
-        if (this.gameEngine.camera) {
-            const camera = this.gameEngine.camera;
-            const zoomSpeed = 0.1;
-            const delta = -Math.sign(event.deltaY) * zoomSpeed;
-            
-            // Calculate new camera distance
-            this.cameraDistance = Math.max(
-                this.minCameraDistance,
-                Math.min(this.maxCameraDistance, this.cameraDistance - delta * 5)
-            );
-
-            // Update camera position while maintaining look target
-            const direction = camera.position.clone().sub(this.cameraTarget).normalize();
-            camera.position.copy(this.cameraTarget).add(direction.multiplyScalar(this.cameraDistance));
-            camera.lookAt(this.cameraTarget);
-        }
+        // Let OrbitControls handle the zoom
+        // We don't prevent default here to allow OrbitControls to work
     }
 
     onContextMenu(event) {
-        event.preventDefault();
+        // Only prevent context menu if not using OrbitControls
+        if (!this.gameEngine.controls) {
+            event.preventDefault();
+        }
     }
 
     getEntityUnderMouse() {

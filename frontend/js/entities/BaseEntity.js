@@ -25,7 +25,7 @@ export default class BaseEntity {
 
         // Damage indicator properties
         this.damageIndicators = [];
-        this.damageIndicatorLifetime = 5.0; // Increased to 5 seconds
+        this.damageIndicatorLifetime = 3.0; // 3 seconds visibility
     }
 
     get position() {
@@ -73,6 +73,10 @@ export default class BaseEntity {
         if (this.isDead() && !this._isDead) {
             this._isDead = true;
             console.log(`${this.constructor.name} #${this.id} has died`);
+            
+            // Clean up all damage indicators immediately
+            this.cleanupDamageIndicators();
+            
             // Remove from scene after a short delay to show death effects
             setTimeout(() => {
                 if (this.gameEngine && this.gameEngine.entityManager) {
@@ -110,9 +114,8 @@ export default class BaseEntity {
         canvas.width = 512; // Increased for better visibility
         canvas.height = 256;
         
-        // Clear canvas with semi-transparent background for better visibility
-        context.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        context.fillRect(0, 0, canvas.width, canvas.height);
+        // Clear canvas with transparent background
+        context.clearRect(0, 0, canvas.width, canvas.height);
         
         // Set up text style
         const text = `-${Math.round(amount)}`;
@@ -224,11 +227,26 @@ export default class BaseEntity {
                 // Make sprite face camera
                 indicator.mesh.lookAt(camera.position);
                 
-                // Update opacity (stay visible longer)
+                // Update opacity (fade out in last second)
                 const opacity = indicator.lifetime > 1.0 ? 1.0 : indicator.lifetime;
                 indicator.mesh.material.opacity = opacity;
             }
         }
+    }
+
+    cleanupDamageIndicators() {
+        // Remove all damage indicators
+        for (const indicator of this.damageIndicators) {
+            if (indicator.mesh) {
+                this.gameEngine.scene.remove(indicator.mesh);
+                if (indicator.mesh.material.map) {
+                    indicator.mesh.material.map.dispose();
+                }
+                indicator.mesh.material.dispose();
+            }
+        }
+        this.damageIndicators = [];
+        console.log(`Cleaned up all damage indicators for ${this.constructor.name} #${this.id}`);
     }
 
     applyForce(force) {
