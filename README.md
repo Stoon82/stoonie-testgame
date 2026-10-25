@@ -1,3 +1,8 @@
+> **ARCHIVED — superseded by [StoonGame-EmberWorlds](https://github.com/Stoon82/StoonGame-EmberWorlds).**
+> Kept for history; active development is in the successor. Landscape map: [project-hub](https://github.com/Stoon82/project-hub).
+
+---
+
 # StoonGame
 
 A unique game where you manage souls and their Stoonie vessels in a dynamic ecosystem. Watch as Stoonies interact, reproduce, and engage in combat with demon variants.
